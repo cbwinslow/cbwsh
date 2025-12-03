@@ -144,17 +144,95 @@ Built with the complete Charm ecosystem:
 
 ## Installation
 
+### Quick Install (Recommended)
+
+#### Linux / macOS
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/cbwinslow/cbwsh/main/install.sh | bash
+```
+
+Or with wget:
+
+```bash
+wget -qO- https://raw.githubusercontent.com/cbwinslow/cbwsh/main/install.sh | bash
+```
+
+#### Windows (PowerShell)
+
+```powershell
+iwr https://raw.githubusercontent.com/cbwinslow/cbwsh/main/install.ps1 | iex
+```
+
+Or download and run manually:
+
+```powershell
+.\install.ps1 -AddToPath
+```
+
+### Using Go
+
 ```bash
 go install github.com/cbwinslow/cbwsh@latest
 ```
 
-Or build from source:
+### Build from Source
+
+```bash
+git clone https://github.com/cbwinslow/cbwsh.git
+cd cbwsh
+make install
+```
+
+Or without make:
 
 ```bash
 git clone https://github.com/cbwinslow/cbwsh.git
 cd cbwsh
 go build -o cbwsh .
 ./cbwsh
+```
+
+### Installation Options
+
+#### Linux/macOS Script Options
+
+```bash
+# Install specific version
+curl -fsSL https://raw.githubusercontent.com/cbwinslow/cbwsh/main/install.sh | bash -s -- --version v1.0.0
+
+# Install to custom location
+curl -fsSL https://raw.githubusercontent.com/cbwinslow/cbwsh/main/install.sh | bash -s -- --prefix ~/.local/bin
+
+# Install without sudo
+curl -fsSL https://raw.githubusercontent.com/cbwinslow/cbwsh/main/install.sh | bash -s -- --no-sudo --prefix ~/.local/bin
+```
+
+#### Windows PowerShell Options
+
+```powershell
+# Install specific version
+.\install.ps1 -Version v1.0.0
+
+# Install to custom location
+.\install.ps1 -Prefix "C:\Tools\cbwsh"
+
+# Install and add to PATH
+.\install.ps1 -AddToPath
+```
+
+#### Makefile Targets
+
+```bash
+make                  # Build the binary
+make install          # Install to /usr/local/bin
+make install PREFIX=~/.local  # Install to custom prefix
+make uninstall        # Remove installed binary
+make test             # Run tests
+make lint             # Run linter
+make clean            # Clean build artifacts
+make cross-compile    # Build for all platforms
+make help             # Show all available targets
 ```
 
 ## Configuration
@@ -358,7 +436,27 @@ golangci-lint run ./...
 
 # Build
 go build -o cbwsh .
+
+# Or use make
+make test           # Run tests
+make lint           # Run linter
+make build          # Build binary
+make dev            # Development mode with file watching
 ```
+
+## Roadmap
+
+See [TODO.md](TODO.md) for a comprehensive list of planned features, including:
+
+- 🤖 **AI Features**: Natural language commands, error fixes, code generation
+- 🖥️ **Terminal UI**: Floating panes, tabs, themes, visual effects
+- 🐚 **Shell Features**: Block-based input, structured output, job progress
+- 🔒 **Security**: Password manager integrations, 2FA, hardware keys
+- 📡 **SSH & Remote**: Multi-hop connections, SFTP, Mosh support
+- 🎨 **Customization**: Starship-like prompts, custom themes, key bindings
+- 🔧 **Integration**: Git, Docker, Kubernetes, cloud providers
+
+We welcome contributions! Check the [TODO.md](TODO.md) for areas where you can help.
 
 ## License
 
