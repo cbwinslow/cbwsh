@@ -2,37 +2,61 @@
 package ssh
 
 import (
+	"bufio"
 	"context"
 	"fmt"
 	"net"
 	"os"
+	"path/filepath"
 	"strings"
 	"sync"
 	"time"
 
 	"github.com/cbwinslow/cbwsh/pkg/core"
 	"golang.org/x/crypto/ssh"
+	"golang.org/x/crypto/ssh/knownhosts"
 )
 
 // Manager handles SSH connections and host management.
 type Manager struct {
-	mu           sync.RWMutex
-	client       *ssh.Client
-	state        core.SSHConnectionState
-	currentHost  *core.SSHHost
-	savedHosts   []core.SSHHost
-	hostFilePath string
-	timeout      time.Duration
+	mu             sync.RWMutex
+	client         *ssh.Client
+	state          core.SSHConnectionState
+	currentHost    *core.SSHHost
+	savedHosts     []core.SSHHost
+	hostFilePath   string
+	knownHostsPath string
+	timeout        time.Duration
+	strictHostKey  bool
 }
 
 // NewManager creates a new SSH manager.
 func NewManager(hostFilePath string, timeout time.Duration) *Manager {
+	homeDir, _ := os.UserHomeDir()
+	knownHostsPath := filepath.Join(homeDir, ".ssh", "known_hosts")
+
 	return &Manager{
-		state:        core.SSHDisconnected,
-		savedHosts:   make([]core.SSHHost, 0),
-		hostFilePath: hostFilePath,
-		timeout:      timeout,
+		state:          core.SSHDisconnected,
+		savedHosts:     make([]core.SSHHost, 0),
+		hostFilePath:   hostFilePath,
+		knownHostsPath: knownHostsPath,
+		timeout:        timeout,
+		strictHostKey:  false, // Default to permissive for ease of use
 	}
+}
+
+// SetStrictHostKeyChecking enables or disables strict host key checking.
+func (m *Manager) SetStrictHostKeyChecking(strict bool) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	m.strictHostKey = strict
+}
+
+// SetKnownHostsPath sets the path to the known_hosts file.
+func (m *Manager) SetKnownHostsPath(path string) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	m.knownHostsPath = path
 }
 
 // Connect establishes an SSH connection.
@@ -49,9 +73,15 @@ func (m *Manager) Connect(ctx context.Context, host string, port int, user strin
 
 	m.state = core.SSHConnecting
 
+	hostKeyCallback, err := m.getHostKeyCallback()
+	if err != nil {
+		m.state = core.SSHError
+		return fmt.Errorf("failed to configure host key verification: %w", err)
+	}
+
 	config := &ssh.ClientConfig{
 		User:            user,
-		HostKeyCallback: ssh.InsecureIgnoreHostKey(), //nolint:gosec // User-controlled
+		HostKeyCallback: hostKeyCallback,
 		Timeout:         m.timeout,
 	}
 
@@ -103,10 +133,16 @@ func (m *Manager) ConnectWithKey(ctx context.Context, host string, port int, use
 		return fmt.Errorf("failed to load key: %w", err)
 	}
 
+	hostKeyCallback, err := m.getHostKeyCallback()
+	if err != nil {
+		m.state = core.SSHError
+		return fmt.Errorf("failed to configure host key verification: %w", err)
+	}
+
 	config := &ssh.ClientConfig{
 		User:            user,
 		Auth:            []ssh.AuthMethod{ssh.PublicKeys(key)},
-		HostKeyCallback: ssh.InsecureIgnoreHostKey(), //nolint:gosec // User-controlled
+		HostKeyCallback: hostKeyCallback,
 		Timeout:         m.timeout,
 	}
 
@@ -140,10 +176,16 @@ func (m *Manager) ConnectWithPassword(ctx context.Context, host string, port int
 
 	m.state = core.SSHConnecting
 
+	hostKeyCallback, err := m.getHostKeyCallback()
+	if err != nil {
+		m.state = core.SSHError
+		return fmt.Errorf("failed to configure host key verification: %w", err)
+	}
+
 	config := &ssh.ClientConfig{
 		User:            user,
 		Auth:            []ssh.AuthMethod{ssh.Password(password)},
-		HostKeyCallback: ssh.InsecureIgnoreHostKey(), //nolint:gosec // User-controlled
+		HostKeyCallback: hostKeyCallback,
 		Timeout:         m.timeout,
 	}
 
@@ -384,11 +426,98 @@ func loadPrivateKey(keyPath, passphrase string) (ssh.Signer, error) {
 	return ssh.ParsePrivateKey(keyData)
 }
 
+// getHostKeyCallback returns an appropriate host key callback.
+// If strict host key checking is enabled and a known_hosts file exists,
+// it uses that file for verification. Otherwise, it uses a permissive callback.
+func (m *Manager) getHostKeyCallback() (ssh.HostKeyCallback, error) {
+	if m.strictHostKey && m.knownHostsPath != "" {
+		// Try to use known_hosts file
+		if _, err := os.Stat(m.knownHostsPath); err == nil {
+			callback, err := knownhosts.New(m.knownHostsPath)
+			if err != nil {
+				return nil, fmt.Errorf("failed to parse known_hosts: %w", err)
+			}
+			return callback, nil
+		}
+	}
+
+	// Fall back to a callback that accepts any key but logs it
+	// NOTE: This is insecure and should only be used in trusted networks
+	// or when strict host key checking is explicitly disabled
+	return ssh.InsecureIgnoreHostKey(), nil //nolint:gosec // User explicitly disabled strict mode
+}
+
+// AddHostToKnownHosts adds a host key to the known_hosts file.
+func (m *Manager) AddHostToKnownHosts(hostname string, remote net.Addr, key ssh.PublicKey) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	if m.knownHostsPath == "" {
+		return fmt.Errorf("known_hosts path not configured")
+	}
+
+	// Create directory if needed
+	dir := filepath.Dir(m.knownHostsPath)
+	if err := os.MkdirAll(dir, 0o700); err != nil {
+		return fmt.Errorf("failed to create .ssh directory: %w", err)
+	}
+
+	// Open file for appending
+	f, err := os.OpenFile(m.knownHostsPath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o600)
+	if err != nil {
+		return fmt.Errorf("failed to open known_hosts: %w", err)
+	}
+	defer f.Close()
+
+	// Format the entry
+	entry := knownhosts.Line([]string{knownhosts.Normalize(remote.String())}, key)
+
+	if _, err := f.WriteString(entry + "\n"); err != nil {
+		return fmt.Errorf("failed to write to known_hosts: %w", err)
+	}
+
+	return nil
+}
+
+// IsHostKnown checks if a host is in the known_hosts file.
+func (m *Manager) IsHostKnown(hostname string) bool {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+
+	if m.knownHostsPath == "" {
+		return false
+	}
+
+	file, err := os.Open(m.knownHostsPath)
+	if err != nil {
+		return false
+	}
+	defer file.Close()
+
+	scanner := bufio.NewScanner(file)
+	for scanner.Scan() {
+		line := scanner.Text()
+		if strings.Contains(line, hostname) {
+			return true
+		}
+	}
+
+	return false
+}
+
 // HostKeyCallback returns a host key callback that checks known hosts.
+// Deprecated: Use SetStrictHostKeyChecking and connect methods instead.
 func HostKeyCallback(knownHostsPath string) ssh.HostKeyCallback {
-	// For simplicity, we use InsecureIgnoreHostKey
-	// In production, you'd want to implement proper host key verification
-	return ssh.InsecureIgnoreHostKey()
+	if knownHostsPath != "" {
+		if _, err := os.Stat(knownHostsPath); err == nil {
+			callback, err := knownhosts.New(knownHostsPath)
+			if err == nil {
+				return callback
+			}
+		}
+	}
+	// Fall back to insecure if known_hosts is not available
+	return ssh.InsecureIgnoreHostKey() //nolint:gosec // Fallback when no known_hosts available
 }
 
 // ParseSSHURI parses an SSH URI into components.

@@ -14,14 +14,17 @@ import (
 
 // Bar represents a progress bar component.
 type Bar struct {
-	mu        sync.RWMutex
-	progress  progress.Model
-	current   int
-	total     int
-	message   string
-	finished  bool
-	startTime time.Time
-	width     int
+	mu          sync.RWMutex
+	progress    progress.Model
+	current     int
+	total       int
+	message     string
+	finished    bool
+	startTime   time.Time
+	width       int
+	colorA      string
+	colorB      string
+	useGradient bool
 }
 
 // NewBar creates a new progress bar.
@@ -31,8 +34,9 @@ func NewBar() *Bar {
 		progress.WithWidth(40),
 	)
 	return &Bar{
-		progress: p,
-		width:    40,
+		progress:    p,
+		width:       40,
+		useGradient: false,
 	}
 }
 
@@ -43,8 +47,11 @@ func NewBarWithColors(colorA, colorB string) *Bar {
 		progress.WithWidth(40),
 	)
 	return &Bar{
-		progress: p,
-		width:    40,
+		progress:    p,
+		width:       40,
+		colorA:      colorA,
+		colorB:      colorB,
+		useGradient: true,
 	}
 }
 
@@ -135,10 +142,17 @@ func (b *Bar) SetWidth(width int) {
 	b.mu.Lock()
 	defer b.mu.Unlock()
 	b.width = width
-	b.progress = progress.New(
-		progress.WithDefaultGradient(),
-		progress.WithWidth(width),
-	)
+	if b.useGradient {
+		b.progress = progress.New(
+			progress.WithGradient(b.colorA, b.colorB),
+			progress.WithWidth(width),
+		)
+	} else {
+		b.progress = progress.New(
+			progress.WithDefaultGradient(),
+			progress.WithWidth(width),
+		)
+	}
 }
 
 // Model is a bubbletea model for a progress bar.

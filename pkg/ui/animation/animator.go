@@ -2,6 +2,7 @@
 package animation
 
 import (
+	"math"
 	"sync"
 	"time"
 
@@ -285,27 +286,7 @@ func (Easing) Elastic(t float64) float64 {
 	if t == 0 || t == 1 {
 		return t
 	}
-	return -pow(2, 10*t-10) * sin((t*10-10.75)*(2*3.14159265359)/3)
-}
-
-func pow(base, exp float64) float64 {
-	result := 1.0
-	for i := 0; i < int(exp); i++ {
-		result *= base
-	}
-	return result
-}
-
-func sin(x float64) float64 {
-	// Taylor series approximation for sin
-	x = x - float64(int(x/(2*3.14159265359)))*2*3.14159265359
-	result := x
-	term := x
-	for i := 1; i <= 10; i++ {
-		term *= -x * x / float64(2*i*(2*i+1))
-		result += term
-	}
-	return result
+	return -math.Pow(2, 10*t-10) * math.Sin((t*10-10.75)*(2*math.Pi)/3)
 }
 
 // Transition represents an animated transition between states.

@@ -7,6 +7,7 @@ import (
 	"io"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
 	"sync"
 	"time"
@@ -442,7 +443,7 @@ func (h *History) Save() error {
 	h.mu.RLock()
 	defer h.mu.RUnlock()
 
-	dir := strings.TrimSuffix(h.filePath, "/"+strings.Split(h.filePath, "/")[len(strings.Split(h.filePath, "/"))-1])
+	dir := filepath.Dir(h.filePath)
 	if err := os.MkdirAll(dir, 0o700); err != nil {
 		return err
 	}

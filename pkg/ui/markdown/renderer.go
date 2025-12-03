@@ -2,6 +2,7 @@
 package markdown
 
 import (
+	"strconv"
 	"sync"
 
 	"github.com/charmbracelet/glamour"
@@ -195,7 +196,7 @@ func (r *Renderer) RenderList(items []string, ordered bool) (string, error) {
 
 	for i, item := range items {
 		if ordered {
-			markdown += string(rune('1'+i)) + ". " + item + "\n"
+			markdown += strconv.Itoa(i+1) + ". " + item + "\n"
 		} else {
 			markdown += "- " + item + "\n"
 		}
