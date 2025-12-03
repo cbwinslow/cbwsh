@@ -35,6 +35,14 @@ A modern, modular terminal shell built with the complete [Bubble Tea](https://gi
 - 🎨 **Syntax highlighting**: Shell command highlighting with chroma
 - 🎭 **Themes**: Multiple color themes (default, dracula, nord)
 
+### Terminal Features
+- 📋 **Menu bar**: Standard File, Edit, View, Help menus with keyboard shortcuts
+- 📝 **Command history**: Persistent history with search
+- ⚙️ **Job control**: Background job management (start, stop, resume, kill)
+- 📊 **Logging**: Structured logging with multiple levels and formats
+- 🔑 **Privilege management**: Sudo/su integration and privilege elevation
+- 🖥️ **POSIX signals**: Signal handling and process management
+
 ## Architecture
 
 The project follows a modular architecture with complete abstraction:
@@ -52,7 +60,12 @@ cbwsh/
     ├── secrets/        # Encrypted secrets storage (AES, age, GPG)
     ├── ssh/            # SSH connection management
     ├── ai/             # AI agents, A2A protocol, and tools
+    ├── logging/        # Structured logging infrastructure
+    ├── process/        # Job control and process management
+    ├── privileges/     # Privilege checking and elevation
+    ├── posix/          # POSIX signals and system calls
     └── ui/
+        ├── menu/       # Menu bar component
         ├── progress/   # Progress bar component
         ├── markdown/   # Markdown renderer
         ├── animation/  # Harmonica animations
@@ -97,6 +110,19 @@ Built with the complete Charm ecosystem:
 | Ctrl+B | Toggle sidebar |
 | Ctrl+A | AI assist mode |
 | Ctrl+? | Help |
+
+### Menu Bar
+| Key | Action |
+|-----|--------|
+| Alt+M / F10 | Toggle menu bar |
+| Alt+F | File menu |
+| Alt+E | Edit menu |
+| Alt+V | View menu |
+| Alt+H | Help menu |
+| ←/→ | Navigate menus |
+| ↑/↓ | Navigate items |
+| Enter | Select item |
+| Escape | Close menu |
 
 ### AI Chat Pane
 | Key | Action |
@@ -192,6 +218,98 @@ particles.SetColors(effects.DefaultFireColors)
 particles.Emit(x, y, count, spread, speed)
 particles.Update()
 output := particles.RenderColored()
+```
+
+## Logging
+
+```go
+import "github.com/cbwinslow/cbwsh/pkg/logging"
+
+// Create a logger
+logger := logging.New(
+    logging.WithLevel(logging.LevelDebug),
+    logging.WithOutput(os.Stderr),
+)
+
+// Log messages
+logger.Info("Application started")
+logger.Debug("Debug message")
+logger.Error("Something went wrong")
+
+// With fields
+logger.WithField("user", "john").Info("User logged in")
+logger.WithFields(map[string]any{
+    "action": "execute",
+    "command": "ls -la",
+}).Debug("Command executed")
+```
+
+## Job Control
+
+```go
+import "github.com/cbwinslow/cbwsh/pkg/process"
+
+// Create job manager
+manager := process.NewJobManager(100)
+
+// Start a background job
+job, err := manager.StartJob(ctx, "sleep 10", "/bin/bash")
+
+// List jobs
+for _, job := range manager.ListJobs() {
+    fmt.Printf("%s\n", job.String())
+}
+
+// Stop a job
+manager.StopJob(job.ID)
+
+// Continue a stopped job
+manager.ContinueJob(job.ID)
+
+// Kill a job
+manager.KillJob(job.ID)
+```
+
+## Privilege Management
+
+```go
+import "github.com/cbwinslow/cbwsh/pkg/privileges"
+
+// Create privilege manager
+manager := privileges.NewManager()
+
+// Check current privileges
+if manager.IsRoot() {
+    fmt.Println("Running as root")
+}
+
+// Check if command requires elevation
+if privileges.RequiresElevation("apt update") {
+    fmt.Println("Needs sudo")
+}
+
+// Execute elevated command
+output, err := manager.ExecuteElevated(ctx, "apt update")
+```
+
+## POSIX Signals
+
+```go
+import "github.com/cbwinslow/cbwsh/pkg/posix"
+
+// Create signal manager
+manager := posix.NewSignalManager()
+
+// Register signal handler
+manager.RegisterHandler(posix.SIGINT, func(sig posix.Signal) {
+    fmt.Printf("Received %s\n", sig)
+})
+
+// Start handling signals
+manager.Start(posix.SIGINT, posix.SIGTERM)
+
+// Send signal to process
+posix.Send(pid, posix.SIGTERM)
 ```
 
 ## AI Integration

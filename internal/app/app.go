@@ -16,14 +16,18 @@ import (
 	"github.com/cbwinslow/cbwsh/pkg/ai"
 	"github.com/cbwinslow/cbwsh/pkg/config"
 	"github.com/cbwinslow/cbwsh/pkg/core"
+	"github.com/cbwinslow/cbwsh/pkg/logging"
 	"github.com/cbwinslow/cbwsh/pkg/panes"
 	"github.com/cbwinslow/cbwsh/pkg/plugins"
+	"github.com/cbwinslow/cbwsh/pkg/privileges"
+	"github.com/cbwinslow/cbwsh/pkg/process"
 	"github.com/cbwinslow/cbwsh/pkg/secrets"
 	"github.com/cbwinslow/cbwsh/pkg/shell"
 	"github.com/cbwinslow/cbwsh/pkg/ssh"
 	"github.com/cbwinslow/cbwsh/pkg/ui/autocomplete"
 	"github.com/cbwinslow/cbwsh/pkg/ui/highlight"
 	"github.com/cbwinslow/cbwsh/pkg/ui/markdown"
+	"github.com/cbwinslow/cbwsh/pkg/ui/menu"
 	"github.com/cbwinslow/cbwsh/pkg/ui/styles"
 )
 
@@ -48,13 +52,16 @@ const (
 // Model is the main application model.
 type Model struct {
 	// Core components
-	config         *config.Config
-	paneManager    *panes.Manager
-	pluginManager  *plugins.Manager
-	secretsManager *secrets.Manager
-	sshManager     *ssh.Manager
-	aiManager      *ai.Manager
-	history        *shell.History
+	config           *config.Config
+	paneManager      *panes.Manager
+	pluginManager    *plugins.Manager
+	secretsManager   *secrets.Manager
+	sshManager       *ssh.Manager
+	aiManager        *ai.Manager
+	history          *shell.History
+	jobManager       *process.JobManager
+	privilegeManager *privileges.Manager
+	logger           *logging.Logger
 
 	// UI components
 	input       textinput.Model
@@ -63,6 +70,7 @@ type Model struct {
 	highlighter *highlight.ShellHighlighter
 	completer   *autocomplete.Completer
 	mdRenderer  *markdown.Renderer
+	menuBar     *menu.MenuBar
 
 	// State
 	mode          Mode
@@ -72,6 +80,7 @@ type Model struct {
 	executing     bool
 	showSidebar   bool
 	showStatusBar bool
+	showMenuBar   bool
 	suggestions   []core.Suggestion
 	selectedSugg  int
 	commandOutput []outputLine
@@ -95,6 +104,7 @@ type KeyMap struct {
 	SplitVertical   key.Binding
 	SplitHorizontal key.Binding
 	ToggleSidebar   key.Binding
+	ToggleMenuBar   key.Binding
 	CommandPalette  key.Binding
 	AIAssist        key.Binding
 	Execute         key.Binding
@@ -148,6 +158,10 @@ func DefaultKeyMap() KeyMap {
 			key.WithKeys("ctrl+p"),
 			key.WithHelp("ctrl+p", "command palette"),
 		),
+		ToggleMenuBar: key.NewBinding(
+			key.WithKeys("f10", "alt+m"),
+			key.WithHelp("F10", "toggle menu"),
+		),
 		AIAssist: key.NewBinding(
 			key.WithKeys("ctrl+a"),
 			key.WithHelp("ctrl+a", "AI assist"),
@@ -197,23 +211,36 @@ func New() Model {
 
 	mdRenderer, _ := markdown.NewRenderer()
 
+	// Create logger
+	logger := logging.New(logging.WithLevel(logging.LevelInfo))
+
+	// Create menu bar with default menus
+	menuBar := menu.NewMenuBar()
+	for _, m := range menu.CreateDefaultMenus() {
+		menuBar.AddMenu(m)
+	}
+
 	return Model{
-		config:         cfg,
-		paneManager:    panes.NewManager(cfg.Shell.DefaultShell),
-		pluginManager:  plugins.NewManager(),
-		secretsManager: secrets.NewManager(cfg.Secrets.StorePath),
-		sshManager:     ssh.NewManager("", time.Duration(cfg.SSH.ConnectTimeout)*time.Second),
-		aiManager:      ai.NewManager(),
-		history:        shell.NewHistory(cfg.Shell.HistorySize, cfg.Shell.HistoryPath),
-		input:          ti,
-		spinner:        s,
-		styles:         styles.DefaultStyles(),
-		highlighter:    highlight.NewShellHighlighter(),
-		completer:      autocomplete.NewCompleter(),
-		mdRenderer:     mdRenderer,
-		mode:           ModeNormal,
-		showStatusBar:  cfg.UI.ShowStatusBar,
-		commandOutput:  make([]outputLine, 0),
+		config:           cfg,
+		paneManager:      panes.NewManager(cfg.Shell.DefaultShell),
+		pluginManager:    plugins.NewManager(),
+		secretsManager:   secrets.NewManager(cfg.Secrets.StorePath),
+		sshManager:       ssh.NewManager("", time.Duration(cfg.SSH.ConnectTimeout)*time.Second),
+		aiManager:        ai.NewManager(),
+		history:          shell.NewHistory(cfg.Shell.HistorySize, cfg.Shell.HistoryPath),
+		jobManager:       process.NewJobManager(100),
+		privilegeManager: privileges.NewManager(),
+		logger:           logger,
+		input:            ti,
+		spinner:          s,
+		styles:           styles.DefaultStyles(),
+		highlighter:      highlight.NewShellHighlighter(),
+		completer:        autocomplete.NewCompleter(),
+		mdRenderer:       mdRenderer,
+		menuBar:          menuBar,
+		mode:             ModeNormal,
+		showStatusBar:    cfg.UI.ShowStatusBar,
+		commandOutput:    make([]outputLine, 0),
 	}
 }
 
@@ -241,12 +268,22 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.height = msg.Height
 		m.input.Width = msg.Width - 10
 		m.paneManager.UpdateAllSizes(msg.Width, msg.Height-4)
+		m.menuBar.SetWidth(msg.Width)
 		m.ready = true
 		return m, nil
 
 	case tea.KeyMsg:
+		// Handle menu bar input first when it's open
+		if m.menuBar.IsOpen() {
+			handled, cmd := m.menuBar.Update(msg)
+			if handled {
+				return m, cmd
+			}
+		}
+
 		switch {
 		case key.Matches(msg, keys.Quit):
+			m.logger.Info("Application shutting down")
 			_ = m.history.Save()
 			return m, tea.Quit
 
@@ -351,6 +388,11 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.showSidebar = !m.showSidebar
 			return m, nil
 
+		case key.Matches(msg, keys.ToggleMenuBar):
+			m.menuBar.Toggle()
+			m.showMenuBar = m.menuBar.IsOpen()
+			return m, nil
+
 		case key.Matches(msg, keys.AIAssist):
 			if m.mode == ModeAI {
 				m.mode = ModeNormal
@@ -367,6 +409,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if result.Error != "" {
 			m.addOutput(result.Error, false, result.ExitCode)
 		}
+		m.logger.Debugf("Command completed: %s (exit code: %d)", result.Command, result.ExitCode)
 		return m, nil
 
 	case spinner.TickMsg:
@@ -472,6 +515,23 @@ func (m *Model) handleBuiltin(command string) (bool, tea.Model) {
 	case "help":
 		m.mode = ModeHelp
 		return true, m
+	case "jobs":
+		// List background jobs
+		jobs := m.jobManager.ListJobs()
+		if len(jobs) == 0 {
+			m.addOutput("No background jobs", false, 0)
+		} else {
+			for _, job := range jobs {
+				m.addOutput(job.String(), false, 0)
+			}
+		}
+		return true, m
+	case "whoami":
+		info := m.privilegeManager.GetUserInfo()
+		if info != nil {
+			m.addOutput(info.Username, false, 0)
+		}
+		return true, m
 	}
 
 	return false, m
@@ -506,6 +566,12 @@ func (m Model) View() string {
 	}
 
 	var sections []string
+
+	// Menu bar (if visible)
+	if m.showMenuBar || m.menuBar.IsOpen() {
+		menuView := m.menuBar.View()
+		sections = append(sections, menuView)
+	}
 
 	// Header
 	header := m.renderHeader()
