@@ -294,7 +294,10 @@ func (l *Logger) log(level Level, msg string) {
 	}
 
 	output := l.formatter.Format(entry)
-	_, _ = l.output.Write([]byte(output))
+	if _, err := l.output.Write([]byte(output)); err != nil {
+		// Fallback to stderr if primary output fails
+		fmt.Fprintf(os.Stderr, "log write error: %v, message: %s", err, output)
+	}
 }
 
 func (l *Logger) logf(level Level, format string, args ...any) {

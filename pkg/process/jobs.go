@@ -90,6 +90,18 @@ func (j *Job) GetExitCode() int {
 	return j.ExitCode
 }
 
+// GetEndTime returns the end time of the job.
+func (j *Job) GetEndTime() time.Time {
+	j.mu.RLock()
+	defer j.mu.RUnlock()
+	return j.EndTime
+}
+
+// Done returns a channel that is closed when the job completes.
+func (j *Job) Done() <-chan struct{} {
+	return j.stoppedChan
+}
+
 // Duration returns how long the job has been running.
 func (j *Job) Duration() time.Duration {
 	j.mu.RLock()
@@ -194,9 +206,12 @@ func (m *JobManager) monitorJob(job *Job) {
 	if err != nil {
 		if exitErr, ok := err.(*exec.ExitError); ok {
 			job.ExitCode = exitErr.ExitCode()
-			if exitErr.ExitCode() == -1 {
-				// Process was killed
-				job.State = JobStateStopped
+			// Check if process was killed by a signal
+			// In Unix, processes killed by signals typically have exit codes > 128
+			// or may be represented as -1 depending on the Go version
+			if exitErr.ExitCode() > 128 || exitErr.ExitCode() == -1 {
+				// Process was killed by a signal
+				job.State = JobStateFailed
 			} else {
 				job.State = JobStateFailed
 			}
@@ -344,7 +359,8 @@ func (m *JobManager) CleanupCompleted(maxAge time.Duration) int {
 
 	for id, job := range m.jobs {
 		state := job.GetState()
-		if (state == JobStateCompleted || state == JobStateFailed) && !job.EndTime.IsZero() && job.EndTime.Before(cutoff) {
+		endTime := job.GetEndTime()
+		if (state == JobStateCompleted || state == JobStateFailed) && !endTime.IsZero() && endTime.Before(cutoff) {
 			delete(m.jobs, id)
 			count++
 		}
@@ -364,7 +380,7 @@ func (m *JobManager) WaitForJob(jobID int, timeout time.Duration) error {
 	}
 
 	select {
-	case <-job.stoppedChan:
+	case <-job.Done():
 		return nil
 	case <-time.After(timeout):
 		return fmt.Errorf("timeout waiting for job %d", jobID)

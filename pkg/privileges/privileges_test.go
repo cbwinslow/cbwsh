@@ -116,12 +116,13 @@ func TestRequiresElevation(t *testing.T) {
 		{"ls -la", false},
 		{"echo hello", false},
 		{"cat /tmp/test.txt", false},
+		{"cat /etc/passwd", false}, // Reading doesn't require elevation
 		{"apt update", true},
 		{"systemctl restart nginx", true},
 		{"mount /dev/sda1 /mnt", true},
-		{"chmod 755 /etc/hosts", true},
-		{"cat /etc/passwd", true},
+		{"chmod 755 /etc/hosts", true}, // Writing to /etc requires elevation
 		{"useradd testuser", true},
+		{"rm /etc/hosts", true}, // Deleting from /etc requires elevation
 	}
 
 	for _, tt := range tests {

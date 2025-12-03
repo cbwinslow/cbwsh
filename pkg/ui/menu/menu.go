@@ -43,10 +43,8 @@ func (m *Menu) IsEnabled() bool {
 }
 
 // AddItem adds an item to the menu.
+// If item.Enabled is not explicitly set, it defaults to true for non-separator items.
 func (m *Menu) AddItem(item MenuItem) {
-	if !item.Separator {
-		item.Enabled = true
-	}
 	m.Items = append(m.Items, item)
 }
 

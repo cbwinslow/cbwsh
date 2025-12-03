@@ -176,12 +176,16 @@ func (m *SignalManager) processSignals() {
 		case <-m.stopChan:
 			return
 		case sig := <-m.signalChan:
+			sysSig, ok := sig.(syscall.Signal)
+			if !ok {
+				continue
+			}
 			m.mu.RLock()
-			handlers := m.handlers[Signal(sig.(syscall.Signal))]
+			handlers := m.handlers[Signal(sysSig)]
 			m.mu.RUnlock()
 
 			for _, handler := range handlers {
-				handler(Signal(sig.(syscall.Signal)))
+				handler(Signal(sysSig))
 			}
 		}
 	}

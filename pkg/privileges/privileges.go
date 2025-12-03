@@ -299,16 +299,32 @@ func (m *Manager) GetCapabilities() []string {
 }
 
 // RequiresElevation checks if a command requires elevated privileges.
+// Note: This is a heuristic and may have false positives/negatives.
+// For accurate permission checking, use CheckFilePermissions.
 func RequiresElevation(command string) bool {
 	// Commands that typically require root
 	rootCommands := []string{
 		"mount", "umount", "fdisk", "mkfs", "iptables", "ip6tables",
-		"systemctl", "service", "journalctl", "apt", "apt-get", "yum",
+		"systemctl", "service", "apt", "apt-get", "yum",
 		"dnf", "pacman", "apk", "pkg", "useradd", "userdel", "usermod",
-		"groupadd", "groupdel", "groupmod", "chown", "chmod", "passwd",
+		"groupadd", "groupdel", "groupmod", "chown", "passwd",
 		"visudo", "shutdown", "reboot", "poweroff", "halt", "init",
-		"modprobe", "insmod", "rmmod", "lsmod", "dmesg", "sysctl",
-		"crontab", "at", "dpkg", "rpm",
+		"modprobe", "insmod", "rmmod", "sysctl",
+		"dpkg", "rpm",
+	}
+
+	// Commands that write to system areas when modifying
+	writeCommands := map[string]bool{
+		"chmod":   true,
+		"chown":   true,
+		"rm":      true,
+		"mv":      true,
+		"cp":      true,
+		"touch":   true,
+		"mkdir":   true,
+		"install": true,
+		"crontab": true,
+		"at":      true,
 	}
 
 	// Parse command to get the base command
@@ -329,15 +345,18 @@ func RequiresElevation(command string) bool {
 		}
 	}
 
-	// Check for paths that require root
-	for _, arg := range parts {
-		if strings.HasPrefix(arg, "/etc/") ||
-			strings.HasPrefix(arg, "/usr/") ||
-			strings.HasPrefix(arg, "/var/") ||
-			strings.HasPrefix(arg, "/sys/") ||
-			strings.HasPrefix(arg, "/proc/") ||
-			strings.HasPrefix(arg, "/boot/") {
-			return true
+	// Only check paths for commands that modify files
+	if writeCommands[baseCmd] {
+		for _, arg := range parts[1:] {
+			// Skip flags
+			if strings.HasPrefix(arg, "-") {
+				continue
+			}
+			// Check for write operations to system paths
+			if strings.HasPrefix(arg, "/etc/") ||
+				strings.HasPrefix(arg, "/boot/") {
+				return true
+			}
 		}
 	}
 
