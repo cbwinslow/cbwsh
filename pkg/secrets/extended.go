@@ -382,10 +382,16 @@ func (m *ExtendedManager) commitToGit(filePath, message string) error {
 	commitCmd := exec.CommandContext(ctx, gitCmd, "commit", "-m", message)
 	commitCmd.Dir = m.gitRepoPath
 	if output, err := commitCmd.CombinedOutput(); err != nil {
-		// Ignore "nothing to commit" errors
-		if !strings.Contains(string(output), "nothing to commit") {
-			return fmt.Errorf("%s commit failed: %s: %w", gitCmd, string(output), err)
+		// Git commit returns exit code 1 when there's nothing to commit,
+		// which is not an error in our use case. We check the exit code
+		// to distinguish between this and actual errors.
+		if exitErr, ok := err.(*exec.ExitError); ok && exitErr.ExitCode() == 1 {
+			// Check if it's truly "nothing to commit" by looking at output
+			if strings.Contains(string(output), "nothing to commit") {
+				return nil
+			}
 		}
+		return fmt.Errorf("%s commit failed: %s: %w", gitCmd, string(output), err)
 	}
 
 	return nil

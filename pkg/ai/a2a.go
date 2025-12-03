@@ -335,44 +335,55 @@ func NewShellAssistant(aiAgent *Agent) *ShellAssistant {
 }
 
 func (sa *ShellAssistant) handleMessage(ctx context.Context, msg *A2AMessage) (*A2AMessage, error) {
-	var response string
-	var err error
-
-	if sa.aiAgent != nil {
-		switch msg.Type {
-		case A2AMessageTypeQuery:
-			// Parse capability from metadata
-			capability, _ := msg.Metadata["capability"].(string)
-			switch capability {
-			case "suggest_command":
-				response, err = sa.aiAgent.SuggestCommand(ctx, msg.Payload)
-			case "explain_command":
-				response, err = sa.aiAgent.ExplainCommand(ctx, msg.Payload)
-			case "fix_error":
-				command, _ := msg.Metadata["command"].(string)
-				response, err = sa.aiAgent.FixError(ctx, command, msg.Payload)
-			default:
-				response, err = sa.aiAgent.Query(ctx, msg.Payload)
-			}
-		default:
-			response = "Unknown message type"
-		}
-	} else {
-		response = "AI agent not configured"
-	}
-
+	response, err := sa.processMessage(ctx, msg)
 	if err != nil {
-		return &A2AMessage{
-			ID:        uuid.New().String(),
-			Type:      A2AMessageTypeError,
-			From:      sa.info.ID,
-			To:        msg.From,
-			Payload:   err.Error(),
-			Timestamp: time.Now(),
-			ReplyTo:   msg.ID,
-		}, nil
+		return sa.createErrorResponse(msg, err), nil
 	}
 
+	return sa.createSuccessResponse(msg, response), nil
+}
+
+func (sa *ShellAssistant) processMessage(ctx context.Context, msg *A2AMessage) (string, error) {
+	if sa.aiAgent == nil {
+		return "AI agent not configured", nil
+	}
+
+	if msg.Type != A2AMessageTypeQuery {
+		return "Unknown message type", nil
+	}
+
+	return sa.handleQueryCapability(ctx, msg)
+}
+
+func (sa *ShellAssistant) handleQueryCapability(ctx context.Context, msg *A2AMessage) (string, error) {
+	capability, _ := msg.Metadata["capability"].(string)
+
+	switch capability {
+	case "suggest_command":
+		return sa.aiAgent.SuggestCommand(ctx, msg.Payload)
+	case "explain_command":
+		return sa.aiAgent.ExplainCommand(ctx, msg.Payload)
+	case "fix_error":
+		command, _ := msg.Metadata["command"].(string)
+		return sa.aiAgent.FixError(ctx, command, msg.Payload)
+	default:
+		return sa.aiAgent.Query(ctx, msg.Payload)
+	}
+}
+
+func (sa *ShellAssistant) createErrorResponse(msg *A2AMessage, err error) *A2AMessage {
+	return &A2AMessage{
+		ID:        uuid.New().String(),
+		Type:      A2AMessageTypeError,
+		From:      sa.info.ID,
+		To:        msg.From,
+		Payload:   err.Error(),
+		Timestamp: time.Now(),
+		ReplyTo:   msg.ID,
+	}
+}
+
+func (sa *ShellAssistant) createSuccessResponse(msg *A2AMessage, response string) *A2AMessage {
 	return &A2AMessage{
 		ID:        uuid.New().String(),
 		Type:      A2AMessageTypeResponse,
@@ -381,5 +392,5 @@ func (sa *ShellAssistant) handleMessage(ctx context.Context, msg *A2AMessage) (*
 		Payload:   response,
 		Timestamp: time.Now(),
 		ReplyTo:   msg.ID,
-	}, nil
+	}
 }

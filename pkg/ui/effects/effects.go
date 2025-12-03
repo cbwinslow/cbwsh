@@ -25,6 +25,12 @@ const (
 	EffectFluid
 )
 
+// Physics constants for simulations.
+const (
+	// DefaultDecayFactor controls how quickly values decay in simulations.
+	DefaultDecayFactor = 0.99
+)
+
 // ColorIntensity maps intensity values to colors.
 type ColorIntensity struct {
 	Low    lipgloss.Color
@@ -205,12 +211,11 @@ func (f *FluidSimulation) diffuseVelocity() {
 }
 
 func (f *FluidSimulation) applyDecay() {
-	decay := 0.99
 	for y := range f.cells {
 		for x := range f.cells[y] {
-			f.cells[y][x].Density *= decay
-			f.cells[y][x].VelocityX *= decay
-			f.cells[y][x].VelocityY *= decay
+			f.cells[y][x].Density *= DefaultDecayFactor
+			f.cells[y][x].VelocityX *= DefaultDecayFactor
+			f.cells[y][x].VelocityY *= DefaultDecayFactor
 		}
 	}
 }
@@ -437,6 +442,7 @@ type ParticleSystem struct {
 	gravity   float64
 	springs   []harmonica.Spring
 	colors    ColorIntensity
+	randState uint64 // Per-instance random state for thread safety
 }
 
 // Particle represents a single particle.
@@ -462,6 +468,7 @@ func NewParticleSystem(width, height int, maxParticles int) *ParticleSystem {
 		gravity:   0.1,
 		springs:   springs,
 		colors:    DefaultFireColors,
+		randState: 12345, // Initial seed for deterministic effects
 	}
 }
 
@@ -485,8 +492,8 @@ func (ps *ParticleSystem) Emit(x, y float64, count int, spread, speed float64) {
 	defer ps.mu.Unlock()
 
 	for i := 0; i < count; i++ {
-		angle := (math.Pi / 2) + (math.Pi * (0.5 - randFloat()) * spread)
-		velocity := speed * (0.5 + randFloat()*0.5)
+		angle := (math.Pi / 2) + (math.Pi * (0.5 - ps.randFloat()) * spread)
+		velocity := speed * (0.5 + ps.randFloat()*0.5)
 
 		particle := Particle{
 			X:              x,
@@ -501,12 +508,12 @@ func (ps *ParticleSystem) Emit(x, y float64, count int, spread, speed float64) {
 	}
 }
 
-// Simple pseudo-random generator for deterministic effects
-var randState uint64 = 12345
-
-func randFloat() float64 {
-	randState = randState*6364136223846793005 + 1442695040888963407
-	return float64(randState>>33) / float64(1<<31)
+// randFloat returns a pseudo-random float64 in [0, 1).
+// Uses a simple LCG algorithm for deterministic, reproducible effects.
+// This method is not cryptographically secure.
+func (ps *ParticleSystem) randFloat() float64 {
+	ps.randState = ps.randState*6364136223846793005 + 1442695040888963407
+	return float64(ps.randState>>33) / float64(1<<31)
 }
 
 // Update advances the particle system.

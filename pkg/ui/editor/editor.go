@@ -315,13 +315,16 @@ func (e *MarkdownEditor) updatePreview() {
 	}
 }
 
-// InsertText inserts text at the cursor position.
+// InsertText inserts text at the end of the content.
+// Note: Currently inserts at end of content for simplicity.
+// Future versions may support proper cursor position insertion.
 func (e *MarkdownEditor) InsertText(text string) {
 	e.mu.Lock()
 	defer e.mu.Unlock()
 
 	current := e.textarea.Value()
-	// For simplicity, append at end (proper cursor position would need more work)
+	// Note: Text is appended at end. The bubbles textarea component
+	// would need additional work to support insertion at cursor position.
 	e.textarea.SetValue(current + text)
 	e.modified = true
 	e.updatePreview()
