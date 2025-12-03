@@ -3,6 +3,17 @@ package core
 
 import (
 	"context"
+	"errors"
+)
+
+// Common errors.
+var (
+	// ErrNotFound is returned when a resource is not found.
+	ErrNotFound = errors.New("not found")
+	// ErrAlreadyExists is returned when a resource already exists.
+	ErrAlreadyExists = errors.New("already exists")
+	// ErrInvalidInput is returned when input is invalid.
+	ErrInvalidInput = errors.New("invalid input")
 )
 
 // ShellType represents the type of shell to execute commands in.
@@ -145,6 +156,8 @@ const (
 	AIProviderOpenAI
 	// AIProviderAnthropic uses Anthropic API.
 	AIProviderAnthropic
+	// AIProviderGemini uses Google Gemini API.
+	AIProviderGemini
 	// AIProviderLocal uses a local LLM.
 	AIProviderLocal
 )
@@ -158,6 +171,8 @@ func (a AIProvider) String() string {
 		return "openai"
 	case AIProviderAnthropic:
 		return "anthropic"
+	case AIProviderGemini:
+		return "gemini"
 	case AIProviderLocal:
 		return "local"
 	default:

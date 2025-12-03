@@ -57,6 +57,8 @@ func (a *Agent) Query(_ context.Context, prompt string) (string, error) {
 		return a.mockOpenAIQuery(prompt)
 	case core.AIProviderAnthropic:
 		return a.mockAnthropicQuery(prompt)
+	case core.AIProviderGemini:
+		return a.mockGeminiQuery(prompt)
 	case core.AIProviderLocal:
 		return a.mockLocalQuery(prompt)
 	default:
@@ -166,6 +168,10 @@ func (a *Agent) mockOpenAIQuery(prompt string) (string, error) {
 }
 
 func (a *Agent) mockAnthropicQuery(prompt string) (string, error) {
+	return a.mockOpenAIQuery(prompt) // Same mock behavior
+}
+
+func (a *Agent) mockGeminiQuery(prompt string) (string, error) {
 	return a.mockOpenAIQuery(prompt) // Same mock behavior
 }
 
