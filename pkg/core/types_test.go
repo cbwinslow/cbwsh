@@ -101,6 +101,7 @@ func TestAIProviderString(t *testing.T) {
 		{core.AIProviderNone, "none"},
 		{core.AIProviderOpenAI, "openai"},
 		{core.AIProviderAnthropic, "anthropic"},
+		{core.AIProviderGemini, "gemini"},
 		{core.AIProviderLocal, "local"},
 		{core.AIProvider(99), "unknown"},
 	}
