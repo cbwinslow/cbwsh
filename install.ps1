@@ -148,8 +148,25 @@ function Download-Binary {
         Write-Info "Extracting archive..."
         Expand-Archive -Path $tempFile -DestinationPath $extractDir -Force
         
-        # Find the binary
-        $binaryPath = Get-ChildItem -Path $extractDir -Recurse -Filter "${BinaryName}.exe" | Select-Object -First 1
+        # Find the binary - check common paths first before recursive search
+        $binaryPath = $null
+        $commonPaths = @(
+            (Join-Path $extractDir "${BinaryName}.exe"),
+            (Join-Path $extractDir "bin\${BinaryName}.exe"),
+            (Join-Path $extractDir "${BinaryName}\${BinaryName}.exe")
+        )
+        
+        foreach ($path in $commonPaths) {
+            if (Test-Path $path) {
+                $binaryPath = Get-Item $path
+                break
+            }
+        }
+        
+        # Fall back to recursive search if common paths didn't work
+        if ($null -eq $binaryPath) {
+            $binaryPath = Get-ChildItem -Path $extractDir -Recurse -Filter "${BinaryName}.exe" | Select-Object -First 1
+        }
         
         if ($null -eq $binaryPath) {
             Write-Error "Binary not found in archive"

@@ -276,7 +276,14 @@ checksums:
 # Security audit
 audit:
 	@echo "$(CYAN)Running security audit...$(NC)"
-	$(GO) list -json -m all | docker run --rm -i sonatypecommunity/nancy:latest sleuth || true
+	@if command -v docker >/dev/null 2>&1; then \
+		$(GO) list -json -m all | docker run --rm -i sonatypecommunity/nancy:latest sleuth || true; \
+	else \
+		echo "$(YELLOW)Docker not available. Install Docker for security audits, or use: go install github.com/sonatype-nexus-community/nancy@latest && go list -json -m all | nancy sleuth$(NC)"; \
+		if command -v nancy >/dev/null 2>&1; then \
+			$(GO) list -json -m all | nancy sleuth || true; \
+		fi; \
+	fi
 	@echo "$(GREEN)Audit complete$(NC)"
 
 # Update dependencies

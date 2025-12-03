@@ -35,6 +35,9 @@ USE_SUDO="true"
 GITHUB_REPO="cbwinslow/cbwsh"
 BINARY_NAME="cbwsh"
 
+# Global variables for temp directory (for cleanup trap)
+TMP_DIR=""
+
 # Logging functions
 info() {
     echo -e "${BLUE}[INFO]${NC} $*"
@@ -200,13 +203,12 @@ get_latest_version() {
 # Download the binary
 download_binary() {
     local download_url="https://github.com/${GITHUB_REPO}/releases/download/${VERSION}/${BINARY_NAME}_${OS}_${ARCH}.tar.gz"
-    local tmp_dir
-    tmp_dir=$(mktemp -d)
+    TMP_DIR=$(mktemp -d)
 
     info "Downloading cbwsh ${VERSION} for ${OS}/${ARCH}..."
     info "URL: $download_url"
 
-    cd "$tmp_dir" || error "Failed to create temp directory"
+    cd "$TMP_DIR" || error "Failed to create temp directory"
 
     if command -v curl &> /dev/null; then
         curl -fsSL "$download_url" -o "${BINARY_NAME}.tar.gz" || error "Download failed. Please check the version and try again."
@@ -217,12 +219,22 @@ download_binary() {
     info "Extracting archive..."
     tar -xzf "${BINARY_NAME}.tar.gz" || error "Extraction failed"
 
-    BINARY_PATH="${tmp_dir}/${BINARY_NAME}"
+    BINARY_PATH="${TMP_DIR}/${BINARY_NAME}"
     if [[ ! -f "$BINARY_PATH" ]]; then
-        # Try looking in subdirectory
-        BINARY_PATH=$(find "$tmp_dir" -name "$BINARY_NAME" -type f | head -1)
-        if [[ -z "$BINARY_PATH" || ! -f "$BINARY_PATH" ]]; then
-            error "Binary not found in archive"
+        # Try common subdirectory patterns first before using find
+        for subpath in "./${BINARY_NAME}" "./bin/${BINARY_NAME}" "./${BINARY_NAME}-${VERSION}/${BINARY_NAME}"; do
+            if [[ -f "${TMP_DIR}/${subpath}" ]]; then
+                BINARY_PATH="${TMP_DIR}/${subpath}"
+                break
+            fi
+        done
+        
+        # Fall back to find if common patterns didn't work
+        if [[ ! -f "$BINARY_PATH" ]]; then
+            BINARY_PATH=$(find "$TMP_DIR" -name "$BINARY_NAME" -type f -print -quit 2>/dev/null)
+            if [[ -z "$BINARY_PATH" || ! -f "$BINARY_PATH" ]]; then
+                error "Binary not found in archive"
+            fi
         fi
     fi
 
@@ -347,10 +359,13 @@ print_instructions() {
 
 # Cleanup
 cleanup() {
-    if [[ -n "${tmp_dir:-}" ]] && [[ -d "$tmp_dir" ]]; then
-        rm -rf "$tmp_dir"
+    if [[ -n "${TMP_DIR:-}" ]] && [[ -d "$TMP_DIR" ]]; then
+        rm -rf "$TMP_DIR"
     fi
 }
+
+# Set up trap for cleanup on exit
+trap cleanup EXIT
 
 # Main installation function
 main() {
