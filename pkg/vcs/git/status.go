@@ -153,7 +153,7 @@ func (r *Repo) Branches() ([]Branch, error) {
 		return nil, ErrNotGitRepo
 	}
 
-	cmd := exec.Command("git", "branch", "-vv", "--format=%(refname:short)|%(upstream:short)|%(upstream:track)")
+	cmd := exec.Command("git", "for-each-ref", "--format=%(refname:short)|%(upstream:short)|%(upstream:track)", "refs/heads/")
 	cmd.Dir = r.path
 	output, err := cmd.Output()
 	if err != nil {

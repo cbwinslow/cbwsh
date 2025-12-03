@@ -396,11 +396,11 @@ func QuickFix(command, errorMsg string) string {
 		}
 	}
 
-	// Command not found -> suggest installation
+	// Command not found -> suggest checking if command exists
 	if strings.Contains(errorLower, "command not found") {
 		parts := strings.Fields(command)
 		if len(parts) > 0 {
-			return fmt.Sprintf("which %s || echo 'Try: apt install %s'", parts[0], parts[0])
+			return fmt.Sprintf("which %s || echo 'Command not installed. Install it using your package manager.'", parts[0])
 		}
 	}
 

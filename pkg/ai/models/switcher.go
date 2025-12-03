@@ -3,6 +3,7 @@ package models
 
 import (
 	"errors"
+	"strings"
 	"sync"
 
 	"github.com/cbwinslow/cbwsh/pkg/core"
@@ -426,7 +427,7 @@ func ProviderName(provider core.AIProvider) string {
 
 // ProviderFromString converts a string to AIProvider.
 func ProviderFromString(s string) core.AIProvider {
-	switch s {
+	switch strings.ToLower(s) {
 	case "openai":
 		return core.AIProviderOpenAI
 	case "anthropic":

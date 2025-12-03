@@ -203,11 +203,15 @@ func (m *Manager) addToHistory(content, source string) {
 
 // Available checks if clipboard is available on the system.
 func Available() bool {
-	// Try to read from clipboard to check availability
-	_, err := clipboard.ReadAll()
-	// clipboard.ReadAll returns an empty string and nil error on empty clipboard
-	// but returns an error if clipboard is unavailable
-	return err == nil || err.Error() == "exit status 1" // xclip returns 1 on empty
+	// Try to write to clipboard to check availability
+	// This is more reliable than reading as it tests write capability
+	err := clipboard.WriteAll("")
+	if err == nil {
+		return true
+	}
+	// Also try reading - nil error or empty clipboard means available
+	_, readErr := clipboard.ReadAll()
+	return readErr == nil
 }
 
 // CopyText is a standalone function to copy text to clipboard.
