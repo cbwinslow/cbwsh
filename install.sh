@@ -383,7 +383,6 @@ main() {
     create_config
     verify_installation
     print_instructions
-    cleanup
 }
 
 # Run main function
