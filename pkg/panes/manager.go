@@ -1,4 +1,6 @@
 // Package panes provides terminal pane management for cbwsh.
+// It implements split-screen functionality, allowing users to manage
+// multiple shell sessions within the same terminal interface.
 package panes
 
 import (
@@ -11,22 +13,24 @@ import (
 )
 
 // Pane represents a terminal pane with its own shell executor.
+// Each pane maintains its own command history, output, and state.
 type Pane struct {
-	mu       sync.RWMutex
-	id       string
-	title    string
-	active   bool
-	width    int
-	height   int
-	executor *shell.Executor
-	output   []string
-	scrollY  int
+	mu       sync.RWMutex     // Protects concurrent access
+	id       string           // Unique identifier
+	title    string           // Display title
+	active   bool             // Whether this pane is currently active
+	width    int              // Width in characters
+	height   int              // Height in lines
+	executor *shell.Executor  // Shell command executor
+	output   []string         // Output history
+	scrollY  int              // Current scroll position
 }
 
-// NewPane creates a new pane.
+// NewPane creates a new pane with the specified shell type.
+// Returns a pane ready for use with a unique ID.
 func NewPane(shellType core.ShellType) *Pane {
 	return &Pane{
-		id:       uuid.New().String()[:8],
+		id:       uuid.New().String()[:8], // Short UUID for readability
 		title:    "Shell",
 		executor: shell.NewExecutor(shellType),
 		output:   make([]string, 0),
@@ -156,16 +160,17 @@ func (p *Pane) GetScrollY() int {
 	return p.scrollY
 }
 
-// Manager manages multiple panes.
+// Manager manages multiple panes with support for different layouts.
+// It handles pane creation, activation, closing, and layout management.
 type Manager struct {
-	mu           sync.RWMutex
-	panes        map[string]*Pane
-	activePaneID string
-	layout       core.PaneLayout
-	shellType    core.ShellType
+	mu           sync.RWMutex          // Protects concurrent access
+	panes        map[string]*Pane      // All panes by ID
+	activePaneID string                // ID of currently active pane
+	layout       core.PaneLayout       // Current layout (single, split, etc.)
+	shellType    core.ShellType        // Default shell type for new panes
 }
 
-// NewManager creates a new pane manager.
+// NewManager creates a new pane manager with the specified default shell type.
 func NewManager(shellType core.ShellType) *Manager {
 	return &Manager{
 		panes:     make(map[string]*Pane),
@@ -174,37 +179,49 @@ func NewManager(shellType core.ShellType) *Manager {
 	}
 }
 
-// Create creates a new pane.
+// Create creates a new pane and optionally makes it active.
+// Returns the created pane or an error if creation fails.
 func (m *Manager) Create() (core.Pane, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
+	// Create new pane
 	pane := NewPane(m.shellType)
+	if pane == nil {
+		return nil, fmt.Errorf("failed to create pane")
+	}
+
+	// Add to manager
 	m.panes[pane.ID()] = pane
 
-	// If this is the first pane, make it active
-	if m.activePaneID == "" {
-		pane.Activate()
+	// If this is the first pane, activate it
+	if len(m.panes) == 1 {
 		m.activePaneID = pane.ID()
+		pane.Activate()
 	}
 
 	return pane, nil
 }
 
 // Close closes a pane by ID.
+// If the closed pane is active, another pane is activated.
+// Returns an error if the pane doesn't exist.
 func (m *Manager) Close(id string) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
+	// Check if pane exists
 	if _, exists := m.panes[id]; !exists {
 		return fmt.Errorf("pane not found: %s", id)
 	}
 
+	// Remove pane
 	delete(m.panes, id)
 
 	// If we closed the active pane, select another
 	if m.activePaneID == id {
 		m.activePaneID = ""
+		// Activate first available pane
 		for paneID, pane := range m.panes {
 			pane.Activate()
 			m.activePaneID = paneID
