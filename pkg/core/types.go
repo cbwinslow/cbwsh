@@ -160,6 +160,8 @@ const (
 	AIProviderGemini
 	// AIProviderLocal uses a local LLM.
 	AIProviderLocal
+	// AIProviderOllama uses Ollama for local LLMs.
+	AIProviderOllama
 )
 
 // String returns the string representation of the AI provider.
@@ -175,6 +177,8 @@ func (a AIProvider) String() string {
 		return "gemini"
 	case AIProviderLocal:
 		return "local"
+	case AIProviderOllama:
+		return "ollama"
 	default:
 		return "unknown"
 	}

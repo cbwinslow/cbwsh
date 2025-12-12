@@ -18,9 +18,11 @@ A modern, modular terminal shell built with the complete [Bubble Tea](https://gi
 
 ### AI Integration
 - 🤖 **AI agents**: Integrated AI agents for command suggestions, explanations, and error fixes
-- 🌐 **Multiple providers**: Support for OpenAI, Anthropic, Gemini, and local LLMs
+- 🌐 **Multiple providers**: Support for OpenAI, Anthropic, Gemini, Ollama, and local LLMs
 - 🗣️ **A2A Protocol**: Agent-to-agent communication for building complex AI workflows
 - 💬 **AI Chat Pane**: Resizable, configurable chat interface for AI conversations
+- 🔍 **AI Monitor**: Dedicated pane that monitors shell activity and provides automatic recommendations
+- 🦙 **Ollama Integration**: Native support for local Ollama models for privacy-focused AI assistance
 - 📝 **Markdown rendering**: AI responses rendered with full markdown support
 
 ### SSH & Remote
@@ -108,6 +110,7 @@ Built with the complete Charm ecosystem:
 | Ctrl+\ | Split vertical |
 | Ctrl+- | Split horizontal |
 | Ctrl+B | Toggle sidebar |
+| Ctrl+M | Toggle AI monitor |
 | Ctrl+A | AI assist mode |
 | Ctrl+? | Help |
 
@@ -123,6 +126,14 @@ Built with the complete Charm ecosystem:
 | ↑/↓ | Navigate items |
 | Enter | Select item |
 | Escape | Close menu |
+
+### AI Monitor Pane
+| Key | Action |
+|-----|--------|
+| Ctrl+M | Toggle AI monitor pane |
+| Ctrl+L | Clear recommendations |
+| Ctrl+R | Refresh |
+| PageUp/PageDown | Scroll recommendations |
 
 ### AI Chat Pane
 | Key | Action |
@@ -252,10 +263,15 @@ ui:
   syntax_highlighting: true
 
 ai:
-  provider: gemini  # Options: none, openai, anthropic, gemini, local
-  api_key: ""       # Store in secrets manager for security
+  provider: ollama  # Options: none, openai, anthropic, gemini, ollama, local
+  api_key: ""       # Store in secrets manager for security (not needed for Ollama)
   model: "gemini-pro"
   enable_suggestions: true
+  # Ollama-specific settings
+  ollama_url: http://localhost:11434
+  ollama_model: llama2
+  enable_monitoring: true  # Enable AI shell activity monitoring
+  monitoring_interval: 30  # Interval in seconds for AI recommendations
 
 secrets:
   store_path: ~/.cbwsh/secrets.enc
@@ -392,10 +408,45 @@ posix.Send(pid, posix.SIGTERM)
 
 ## AI Integration
 
+### Using Ollama for Local AI
+
+cbwsh supports Ollama for privacy-focused, local AI assistance:
+
+```bash
+# Install Ollama
+curl https://ollama.ai/install.sh | sh
+
+# Pull a model
+ollama pull llama2
+
+# Or use a smaller model
+ollama pull phi3
+
+# Configure cbwsh to use Ollama
+cat > ~/.cbwsh/config.yaml << EOF
+ai:
+  provider: ollama
+  ollama_url: http://localhost:11434
+  ollama_model: llama2
+  enable_monitoring: true
+  monitoring_interval: 30
+EOF
+
+# Launch cbwsh and press Ctrl+M to toggle the AI monitor
+cbwsh
+```
+
+The AI monitor will:
+- Track your shell command execution
+- Analyze errors and provide fixes
+- Suggest command improvements
+- Detect patterns and recommend aliases or scripts
+- Provide contextual tips based on your workflow
+
 ### Using AI Agents
 ```go
-// Create an AI agent
-agent := ai.NewAgent("assistant", core.AIProviderGemini, apiKey, "gemini-pro")
+// Create an AI agent with Ollama
+agent := ai.NewAgent("assistant", core.AIProviderOllama, "", "llama2")
 
 // Query the agent
 response, err := agent.Query(ctx, "How do I list files?")

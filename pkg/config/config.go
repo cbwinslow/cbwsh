@@ -104,6 +104,14 @@ type AIConfig struct {
 	EnableSuggestions bool `yaml:"enable_suggestions"`
 	// LocalModelPath is the path to a local LLM model.
 	LocalModelPath string `yaml:"local_model_path"`
+	// OllamaURL is the URL for Ollama API.
+	OllamaURL string `yaml:"ollama_url"`
+	// OllamaModel is the model to use with Ollama.
+	OllamaModel string `yaml:"ollama_model"`
+	// EnableMonitoring toggles AI shell activity monitoring.
+	EnableMonitoring bool `yaml:"enable_monitoring"`
+	// MonitoringInterval is the interval for generating recommendations (in seconds).
+	MonitoringInterval int `yaml:"monitoring_interval"`
 }
 
 // SSHConfig holds SSH-specific configuration.
@@ -178,10 +186,14 @@ func Default() *Config {
 			AutoLoad:  true,
 		},
 		AI: AIConfig{
-			Provider:          core.AIProviderNone,
-			MaxTokens:         2048,
-			Temperature:       0.7,
-			EnableSuggestions: true,
+			Provider:           core.AIProviderNone,
+			MaxTokens:          2048,
+			Temperature:        0.7,
+			EnableSuggestions:  true,
+			OllamaURL:          "http://localhost:11434",
+			OllamaModel:        "llama2",
+			EnableMonitoring:   false,
+			MonitoringInterval: 30,
 		},
 		SSH: SSHConfig{
 			DefaultKeyPath:    filepath.Join(homeDir, ".ssh", "id_rsa"),
