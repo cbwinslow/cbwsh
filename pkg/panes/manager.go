@@ -187,9 +187,6 @@ func (m *Manager) Create() (core.Pane, error) {
 
 	// Create new pane
 	pane := NewPane(m.shellType)
-	if pane == nil {
-		return nil, fmt.Errorf("failed to create pane")
-	}
 
 	// Add to manager
 	m.panes[pane.ID()] = pane

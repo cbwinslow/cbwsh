@@ -317,7 +317,26 @@ func (e *Executor) GetAliases() map[string]string {
 	return result
 }
 
+// getShellPath returns the path to the shell executable.
+// It uses exec.LookPath to find the shell in the system PATH,
+// falling back to common locations if not found.
 func (e *Executor) getShellPath() string {
+	var shellName string
+	switch e.shellType {
+	case core.ShellTypeBash:
+		shellName = "bash"
+	case core.ShellTypeZsh:
+		shellName = "zsh"
+	default:
+		shellName = "sh"
+	}
+
+	// Try to find the shell in PATH first
+	if path, err := exec.LookPath(shellName); err == nil {
+		return path
+	}
+
+	// Fall back to common locations
 	switch e.shellType {
 	case core.ShellTypeBash:
 		return "/bin/bash"
@@ -328,6 +347,7 @@ func (e *Executor) getShellPath() string {
 	}
 }
 
+// buildEnv builds the environment variable slice for command execution.
 func (e *Executor) buildEnv() []string {
 	baseEnv := os.Environ()
 	result := make([]string, 0, len(baseEnv)+len(e.env))
