@@ -33,14 +33,14 @@ type MonitorPane struct {
 	position string // "right", "bottom"
 
 	// Styles
-	borderStyle      lipgloss.Style
-	titleStyle       lipgloss.Style
-	infoStyle        lipgloss.Style
-	warningStyle     lipgloss.Style
-	tipStyle         lipgloss.Style
-	suggestionStyle  lipgloss.Style
-	timestampStyle   lipgloss.Style
-	activityStyle    lipgloss.Style
+	borderStyle     lipgloss.Style
+	titleStyle      lipgloss.Style
+	infoStyle       lipgloss.Style
+	warningStyle    lipgloss.Style
+	tipStyle        lipgloss.Style
+	suggestionStyle lipgloss.Style
+	timestampStyle  lipgloss.Style
+	activityStyle   lipgloss.Style
 }
 
 // KeyMap defines key bindings for the monitor pane.
@@ -223,7 +223,7 @@ func (p *MonitorPane) updateContent() {
 	}
 
 	recommendations := p.monitor.GetRecommendations()
-	
+
 	var content strings.Builder
 
 	if len(recommendations) == 0 {
@@ -233,7 +233,7 @@ func (p *MonitorPane) updateContent() {
 		// Show recommendations in reverse order (newest first)
 		for i := len(recommendations) - 1; i >= 0; i-- {
 			rec := recommendations[i]
-			
+
 			// Recommendation type indicator
 			var typeStyle lipgloss.Style
 			var typeIcon string
@@ -254,7 +254,7 @@ func (p *MonitorPane) updateContent() {
 
 			// Header with timestamp
 			timestamp := rec.Timestamp.Format("15:04:05")
-			header := typeStyle.Render(typeIcon+rec.Title) + " " + 
+			header := typeStyle.Render(typeIcon+rec.Title) + " " +
 				p.timestampStyle.Render(timestamp)
 			content.WriteString(header)
 			content.WriteString("\n")

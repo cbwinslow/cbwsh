@@ -67,14 +67,14 @@ type Model struct {
 	logger           *logging.Logger
 
 	// UI components
-	input        textinput.Model
-	spinner      spinner.Model
-	styles       *styles.Styles
-	highlighter  *highlight.ShellHighlighter
-	completer    *autocomplete.Completer
-	mdRenderer   *markdown.Renderer
-	menuBar      *menu.MenuBar
-	monitorPane  *aimonitor.MonitorPane
+	input       textinput.Model
+	spinner     spinner.Model
+	styles      *styles.Styles
+	highlighter *highlight.ShellHighlighter
+	completer   *autocomplete.Completer
+	mdRenderer  *markdown.Renderer
+	menuBar     *menu.MenuBar
+	monitorPane *aimonitor.MonitorPane
 
 	// State
 	mode          Mode
@@ -116,10 +116,6 @@ type KeyMap struct {
 	Execute         key.Binding
 	Cancel          key.Binding
 	Up              key.Binding
-	Down            key.Binding
-	Tab             key.Binding
-	Clear           key.Binding
-}
 	Down            key.Binding
 	Tab             key.Binding
 	Clear           key.Binding
@@ -305,7 +301,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.width = msg.Width
 		m.height = msg.Height
 		m.input.Width = msg.Width - 10
-		
+
 		// Calculate available width for panes and monitor
 		availableWidth := msg.Width
 		monitorWidth := 0
@@ -314,7 +310,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			availableWidth = msg.Width - monitorWidth
 			m.monitorPane.SetSize(monitorWidth, msg.Height-4)
 		}
-		
+
 		m.paneManager.UpdateAllSizes(availableWidth, msg.Height-4)
 		m.menuBar.SetWidth(msg.Width)
 		m.ready = true
@@ -474,7 +470,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.addOutput(result.Error, false, result.ExitCode)
 		}
 		m.logger.Debugf("Command completed: %s (exit code: %d)", result.Command, result.ExitCode)
-		
+
 		// Record activity to monitor
 		if m.activityMonitor != nil && m.activityMonitor.IsEnabled() {
 			pane := m.paneManager.ActivePane()
@@ -484,7 +480,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 			m.activityMonitor.RecordCommand(&result, workDir)
 		}
-		
+
 		return m, nil
 
 	case spinner.TickMsg:
@@ -825,33 +821,8 @@ Press any key to return...
 	}
 	return rendered
 }
-| Ctrl+N | New pane |
-| Ctrl+W | Close pane |
-| Ctrl+] | Next pane |
-| Ctrl+[ | Previous pane |
-| Ctrl+\ | Split vertical |
-| Ctrl+- | Split horizontal |
-| Ctrl+B | Toggle sidebar |
-| Ctrl+A | AI assist mode |
-| Ctrl+? | Help |
 
-## Built-in Commands
-
-- **cd** - Change directory
-- **clear** - Clear screen
-- **exit** - Exit shell
-- **help** - Show this help
-
-Press any key to return...
-`
-
-	rendered, err := m.mdRenderer.Render(helpText)
-	if err != nil {
-		return helpText
-	}
-	return rendered
-}
-
+// Run starts the application.
 // Run starts the application.
 func Run() error {
 	p := tea.NewProgram(

@@ -56,7 +56,7 @@ type Activity struct {
 
 // Recommendation represents an AI-generated recommendation.
 type Recommendation struct {
-	Type      string    // "suggestion", "warning", "info", "tip"
+	Type      string // "suggestion", "warning", "info", "tip"
 	Title     string
 	Message   string
 	Timestamp time.Time
@@ -93,13 +93,13 @@ type Monitor struct {
 
 // Config holds monitor configuration.
 type Config struct {
-	OllamaURL         string
-	OllamaModel       string
-	MaxActivities     int
+	OllamaURL          string
+	OllamaModel        string
+	MaxActivities      int
 	MaxRecommendations int
-	AutoRecommend     bool
-	RecommendInterval time.Duration
-	MinActivityGap    time.Duration
+	AutoRecommend      bool
+	RecommendInterval  time.Duration
+	MinActivityGap     time.Duration
 }
 
 // DefaultConfig returns default monitor configuration.
