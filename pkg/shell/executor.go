@@ -1,9 +1,12 @@
 // Package shell provides shell execution functionality for cbwsh.
+// It handles command execution, environment management, and aliases
+// for both bash and zsh shells.
 package shell
 
 import (
 	"bufio"
 	"context"
+	"fmt"
 	"io"
 	"os"
 	"os/exec"
@@ -16,18 +19,23 @@ import (
 )
 
 // Executor implements the core.Executor interface for running shell commands.
+// It provides thread-safe command execution with support for aliases and environment variables.
 type Executor struct {
 	mu         sync.RWMutex
-	shellType  core.ShellType
-	workingDir string
-	env        map[string]string
-	currentCmd *exec.Cmd
-	aliases    map[string]string
+	shellType  core.ShellType         // Type of shell (bash or zsh)
+	workingDir string                 // Current working directory
+	env        map[string]string      // Environment variables
+	currentCmd *exec.Cmd              // Currently executing command
+	aliases    map[string]string      // Command aliases
 }
 
 // NewExecutor creates a new shell executor.
+// If the working directory cannot be determined, it uses the current directory.
 func NewExecutor(shellType core.ShellType) *Executor {
-	wd, _ := os.Getwd()
+	wd, err := os.Getwd()
+	if err != nil {
+		wd = "."
+	}
 	return &Executor{
 		shellType:  shellType,
 		workingDir: wd,
@@ -37,37 +45,54 @@ func NewExecutor(shellType core.ShellType) *Executor {
 }
 
 // Execute runs a command and returns the result.
+// It expands aliases, sets up the environment, and captures output.
 func (e *Executor) Execute(ctx context.Context, command string) (*core.CommandResult, error) {
+	if command == "" {
+		return nil, fmt.Errorf("command cannot be empty")
+	}
+
 	e.mu.Lock()
+	// Expand aliases before execution
 	command = e.expandAliases(command)
 
 	startTime := time.Now()
 
+	// Get shell path and create command
 	shell := e.getShellPath()
+	if shell == "" {
+		e.mu.Unlock()
+		return nil, fmt.Errorf("no suitable shell found")
+	}
+
 	cmd := exec.CommandContext(ctx, shell, "-c", command)
 	cmd.Dir = e.workingDir
 	cmd.Env = e.buildEnv()
 	e.currentCmd = cmd
 	e.mu.Unlock()
 
+	// Execute command and capture output
 	output, err := cmd.CombinedOutput()
 
+	// Clear current command reference
 	e.mu.Lock()
 	e.currentCmd = nil
 	e.mu.Unlock()
 
+	// Build result
 	result := &core.CommandResult{
 		Command:  command,
 		Duration: time.Since(startTime).Milliseconds(),
 	}
 
 	if err != nil {
+		// Check if it's an exit error with a code
 		if exitErr, ok := err.(*exec.ExitError); ok {
 			result.ExitCode = exitErr.ExitCode()
 			result.Error = string(output)
 		} else {
+			// Other errors (e.g., command not found, context cancelled)
 			result.ExitCode = -1
-			result.Error = err.Error()
+			result.Error = fmt.Sprintf("execution error: %v", err)
 		}
 	} else {
 		result.Output = string(output)
