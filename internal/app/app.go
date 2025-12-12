@@ -1,4 +1,5 @@
 // Package app provides the main application for cbwsh.
+// It contains the Bubble Tea model and all core application logic.
 package app
 
 import (
@@ -205,24 +206,48 @@ func DefaultKeyMap() KeyMap {
 
 var keys = DefaultKeyMap()
 
-// New creates a new application model.
-func New() Model {
-	cfg := config.Default()
+// New creates a new application model with the given config file path.
+// If configPath is empty, it uses the default configuration.
+func New(configPath string) (Model, error) {
+	var cfg *config.Config
+	var err error
 
+	// Load configuration
+	if configPath != "" {
+		cfg, err = config.Load(configPath)
+		if err != nil {
+			return Model{}, fmt.Errorf("failed to load config from %s: %w", configPath, err)
+		}
+	} else {
+		cfg = config.Default()
+	}
+
+	// Validate configuration
+	if err := validateConfig(cfg); err != nil {
+		return Model{}, fmt.Errorf("invalid configuration: %w", err)
+	}
+
+	// Create text input component
 	ti := textinput.New()
 	ti.Placeholder = "Enter command..."
 	ti.Focus()
 	ti.CharLimit = 1000
 	ti.Width = 80
 
+	// Create spinner component
 	s := spinner.New()
 	s.Spinner = spinner.Dot
 	s.Style = lipgloss.NewStyle().Foreground(lipgloss.Color("205"))
 
-	mdRenderer, _ := markdown.NewRenderer()
+	// Create markdown renderer with error handling
+	mdRenderer, err := markdown.NewRenderer()
+	if err != nil {
+		return Model{}, fmt.Errorf("failed to create markdown renderer: %w", err)
+	}
 
 	// Create logger
 	logger := logging.New(logging.WithLevel(logging.LevelInfo))
+	logger.Info("Initializing cbwsh...")
 
 	// Create menu bar with default menus
 	menuBar := menu.NewMenuBar()
@@ -230,7 +255,7 @@ func New() Model {
 		menuBar.AddMenu(m)
 	}
 
-	// Create activity monitor
+	// Create activity monitor with error handling
 	monitorCfg := &monitor.Config{
 		OllamaURL:          cfg.AI.OllamaURL,
 		OllamaModel:        cfg.AI.OllamaModel,
@@ -269,21 +294,53 @@ func New() Model {
 		showStatusBar:    cfg.UI.ShowStatusBar,
 		showMonitor:      cfg.AI.EnableMonitoring,
 		commandOutput:    make([]outputLine, 0),
+	}, nil
+}
+
+// validateConfig validates the configuration values
+func validateConfig(cfg *config.Config) error {
+	if cfg == nil {
+		return fmt.Errorf("config is nil")
 	}
+
+	// Validate shell configuration
+	if cfg.Shell.HistorySize < 0 {
+		return fmt.Errorf("shell.history_size must be non-negative")
+	}
+
+	// Validate AI configuration
+	if cfg.AI.MonitoringInterval < 0 {
+		return fmt.Errorf("ai.monitoring_interval must be non-negative")
+	}
+
+	// Validate SSH configuration
+	if cfg.SSH.ConnectTimeout < 0 {
+		return fmt.Errorf("ssh.connect_timeout must be non-negative")
+	}
+
+	return nil
 }
 
 // Init initializes the application.
+// It sets up the initial pane, loads command history, and starts background services.
 func (m Model) Init() tea.Cmd {
-	// Create initial pane
-	_, _ = m.paneManager.Create()
+	// Create initial pane with error handling
+	if _, err := m.paneManager.Create(); err != nil {
+		m.logger.Errorf("Failed to create initial pane: %v", err)
+	}
 
-	// Load history
-	_ = m.history.Load()
+	// Load history with error handling
+	if err := m.history.Load(); err != nil {
+		m.logger.Warnf("Failed to load command history: %v", err)
+	}
 
 	// Start activity monitor if enabled
 	if m.showMonitor && m.activityMonitor != nil {
 		m.activityMonitor.Start()
+		m.logger.Info("AI activity monitor started")
 	}
+
+	m.logger.Info("Application initialized successfully")
 
 	return tea.Batch(
 		textinput.Blink,
@@ -292,12 +349,14 @@ func (m Model) Init() tea.Cmd {
 	)
 }
 
-// Update handles messages.
+// Update handles messages and updates the application state.
+// This is the main event handler for the Bubble Tea application.
 func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	var cmds []tea.Cmd
 
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
+		// Update dimensions
 		m.width = msg.Width
 		m.height = msg.Height
 		m.input.Width = msg.Width - 10
@@ -314,6 +373,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.paneManager.UpdateAllSizes(availableWidth, msg.Height-4)
 		m.menuBar.SetWidth(msg.Width)
 		m.ready = true
+		m.logger.Debugf("Window resized to %dx%d", msg.Width, msg.Height)
 		return m, nil
 
 	case tea.KeyMsg:
@@ -546,22 +606,31 @@ func (m Model) executeCommand() (tea.Model, tea.Cmd) {
 	)
 }
 
+// runCommand executes a shell command in a background goroutine.
+// It returns a tea.Cmd that sends the result back when complete.
 func (m *Model) runCommand(command string) tea.Cmd {
 	return func() tea.Msg {
+		// Get active pane
 		pane := m.paneManager.ActivePane()
 		if pane == nil {
+			m.logger.Error("No active pane available for command execution")
 			return commandResultMsg{
 				Command:  command,
-				Error:    "No active pane",
+				Error:    "No active pane available. Please create a pane first.",
 				ExitCode: -1,
 			}
 		}
 
-		result, err := pane.GetShellExecutor().Execute(context.Background(), command)
+		// Execute command with context
+		ctx := context.Background()
+		m.logger.Debugf("Executing command: %s", command)
+		
+		result, err := pane.GetShellExecutor().Execute(ctx, command)
 		if err != nil {
+			m.logger.Errorf("Command execution failed: %v", err)
 			return commandResultMsg{
 				Command:  command,
-				Error:    err.Error(),
+				Error:    fmt.Sprintf("Execution error: %v", err),
 				ExitCode: -1,
 			}
 		}
@@ -570,6 +639,8 @@ func (m *Model) runCommand(command string) tea.Cmd {
 	}
 }
 
+// handleBuiltin handles built-in shell commands.
+// Returns true if the command was handled as a builtin.
 func (m *Model) handleBuiltin(command string) (bool, tea.Model) {
 	parts := strings.Fields(command)
 	if len(parts) == 0 {
@@ -822,14 +893,26 @@ Press any key to return...
 	return rendered
 }
 
-// Run starts the application.
-// Run starts the application.
-func Run() error {
+// Run starts the application with the given config file path.
+// If configPath is empty, it uses the default configuration.
+func Run(configPath string) error {
+	// Create the application model with error handling
+	model, err := New(configPath)
+	if err != nil {
+		return fmt.Errorf("failed to initialize application: %w", err)
+	}
+
+	// Create and run the Bubble Tea program
 	p := tea.NewProgram(
-		New(),
-		tea.WithAltScreen(),
-		tea.WithMouseCellMotion(),
+		model,
+		tea.WithAltScreen(),       // Use alternate screen buffer
+		tea.WithMouseCellMotion(), // Enable mouse support
 	)
-	_, err := p.Run()
-	return err
+
+	// Run the program and handle errors
+	if _, err := p.Run(); err != nil {
+		return fmt.Errorf("application error: %w", err)
+	}
+
+	return nil
 }

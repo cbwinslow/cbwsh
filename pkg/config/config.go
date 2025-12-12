@@ -1,7 +1,10 @@
 // Package config provides configuration management for cbwsh.
+// It handles loading, saving, and validation of configuration files
+// with support for YAML format and sensible defaults.
 package config
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"sync"
@@ -224,25 +227,32 @@ func Default() *Config {
 }
 
 // Load loads configuration from a file.
+// If the file doesn't exist, it returns the default configuration.
+// Returns an error if the file exists but cannot be read or parsed.
 func Load(path string) (*Config, error) {
 	cfg := Default()
 
+	// Read configuration file
 	data, err := os.ReadFile(path)
 	if err != nil {
+		// Return default config if file doesn't exist
 		if os.IsNotExist(err) {
 			return cfg, nil
 		}
-		return nil, err
+		return nil, fmt.Errorf("failed to read config file: %w", err)
 	}
 
+	// Parse YAML configuration
 	if err := yaml.Unmarshal(data, cfg); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to parse config file: %w", err)
 	}
 
 	return cfg, nil
 }
 
 // LoadFromDefaultPath loads configuration from the default path.
+// Returns default configuration if the default path cannot be determined
+// or the file doesn't exist.
 func LoadFromDefaultPath() (*Config, error) {
 	homeDir, err := os.UserHomeDir()
 	if err != nil {
@@ -254,21 +264,29 @@ func LoadFromDefaultPath() (*Config, error) {
 }
 
 // Save saves configuration to a file.
+// Creates the directory if it doesn't exist.
 func (c *Config) Save(path string) error {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
 
+	// Ensure directory exists with secure permissions (owner only)
 	dir := filepath.Dir(path)
 	if err := os.MkdirAll(dir, 0o700); err != nil {
-		return err
+		return fmt.Errorf("failed to create config directory: %w", err)
 	}
 
+	// Marshal configuration to YAML
 	data, err := yaml.Marshal(c)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to marshal config: %w", err)
 	}
 
-	return os.WriteFile(path, data, 0o600)
+	// Write to file with secure permissions
+	if err := os.WriteFile(path, data, 0o600); err != nil {
+		return fmt.Errorf("failed to write config file: %w", err)
+	}
+
+	return nil
 }
 
 // SaveToDefaultPath saves configuration to the default path.
