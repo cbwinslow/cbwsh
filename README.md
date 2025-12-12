@@ -2,6 +2,26 @@
 
 A modern, modular terminal shell built with the complete [Bubble Tea](https://github.com/charmbracelet/bubbletea) ecosystem. Features rich TUI components, animations, syntax highlighting, AI integration, visual effects, and more.
 
+## Documentation
+
+- **[Installation Guide](INSTALL.md)** - Comprehensive installation instructions for all platforms
+- **[Usage Guide](USAGE.md)** - Complete guide to using cbwsh features
+- **[Roadmap](ROADMAP.md)** - Future plans and features
+- **[TODO List](TODO.md)** - Detailed task list and progress
+
+## Quick Start
+
+```bash
+# Install cbwsh
+curl -fsSL https://raw.githubusercontent.com/cbwinslow/cbwsh/main/install.sh | bash
+
+# Run cbwsh
+cbwsh
+
+# Press Ctrl+? for help
+# Press Ctrl+Q to quit
+```
+
 ## Features
 
 ### Core Shell Features
@@ -95,24 +115,31 @@ Built with the complete Charm ecosystem:
 
 ## Key Bindings
 
+**For complete key bindings and usage, see [USAGE.md](USAGE.md)**
+
+### Essential Keys
+
 | Key | Action |
 |-----|--------|
 | Ctrl+Q | Quit |
+| Ctrl+? / F1 | Help |
 | Ctrl+C | Cancel current command |
 | Enter | Execute command |
 | Tab | Autocomplete |
 | ↑/↓ | Navigate history |
 | Ctrl+L | Clear screen |
+| Ctrl+M | Toggle AI monitor |
+| Ctrl+A | AI assist mode |
+
+### Pane Management
+| Key | Action |
+|-----|--------|
 | Ctrl+N | New pane |
 | Ctrl+W | Close pane |
 | Ctrl+] | Next pane |
 | Ctrl+[ | Previous pane |
 | Ctrl+\ | Split vertical |
 | Ctrl+- | Split horizontal |
-| Ctrl+B | Toggle sidebar |
-| Ctrl+M | Toggle AI monitor |
-| Ctrl+A | AI assist mode |
-| Ctrl+? | Help |
 
 ### Menu Bar
 | Key | Action |
@@ -154,6 +181,8 @@ Built with the complete Charm ecosystem:
 | Ctrl+H | Insert heading |
 
 ## Installation
+
+**For detailed installation instructions, see [INSTALL.md](INSTALL.md)**
 
 ### Quick Install (Recommended)
 
