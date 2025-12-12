@@ -2,6 +2,8 @@
 
 A modern, modular terminal shell built with the complete [Bubble Tea](https://github.com/charmbracelet/bubbletea) ecosystem. Features rich TUI components, animations, syntax highlighting, AI integration, visual effects, and more.
 
+📖 **[Quick Start Guide](USAGE.md)** | 🚀 **[Installation](#installation)** | ⌨️ **[Key Bindings](#key-bindings)** | 🤖 **[AI Features](#ai-integration)**
+
 ## Features
 
 ### Core Shell Features
@@ -44,6 +46,48 @@ A modern, modular terminal shell built with the complete [Bubble Tea](https://gi
 - 📊 **Logging**: Structured logging with multiple levels and formats
 - 🔑 **Privilege management**: Sudo/su integration and privilege elevation
 - 🖥️ **POSIX signals**: Signal handling and process management
+
+## Quick Start
+
+### Installation
+
+```bash
+# Linux/macOS - Quick install
+curl -fsSL https://raw.githubusercontent.com/cbwinslow/cbwsh/main/install.sh | bash
+
+# Or using Go
+go install github.com/cbwinslow/cbwsh@latest
+```
+
+### First Run
+
+```bash
+# Start cbwsh
+cbwsh
+
+# Get help
+cbwsh --help
+
+# Check version
+cbwsh --version
+```
+
+### Basic Usage
+
+```bash
+# Start the shell
+$ cbwsh
+
+# Run commands like any shell
+> ls -la
+> cd /path/to/dir
+> git status
+
+# Press Ctrl+? for help
+# Press Ctrl+Q to quit
+```
+
+For detailed usage instructions, see **[USAGE.md](USAGE.md)**.
 
 ## Architecture
 
@@ -494,6 +538,45 @@ make lint           # Run linter
 make build          # Build binary
 make dev            # Development mode with file watching
 ```
+
+## Troubleshooting
+
+### Common Issues
+
+#### cbwsh not found after installation
+
+Ensure the installation directory is in your PATH:
+```bash
+export PATH="/usr/local/bin:$PATH"
+```
+
+Add this to your `~/.bashrc` or `~/.zshrc` to make it permanent.
+
+#### Configuration errors
+
+If cbwsh fails to start due to configuration errors:
+```bash
+# Remove the config and let cbwsh recreate it
+rm ~/.cbwsh/config.yaml
+cbwsh
+```
+
+#### AI features not working
+
+For Ollama:
+1. Ensure Ollama is running: `ollama list`
+2. Verify the model is installed: `ollama pull llama2`
+3. Check the configuration in `~/.cbwsh/config.yaml`
+
+#### Permission denied errors
+
+Some commands may require elevated privileges. cbwsh will prompt for sudo when needed.
+
+### Getting Help
+
+- **In-app help**: Press `Ctrl+?` or `F1`
+- **Usage guide**: See [USAGE.md](USAGE.md)
+- **Report issues**: https://github.com/cbwinslow/cbwsh/issues
 
 ## Roadmap
 
