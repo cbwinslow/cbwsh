@@ -14,6 +14,7 @@ import (
 	"github.com/charmbracelet/lipgloss"
 
 	"github.com/cbwinslow/cbwsh/pkg/ai"
+	"github.com/cbwinslow/cbwsh/pkg/ai/monitor"
 	"github.com/cbwinslow/cbwsh/pkg/config"
 	"github.com/cbwinslow/cbwsh/pkg/core"
 	"github.com/cbwinslow/cbwsh/pkg/logging"
@@ -24,6 +25,7 @@ import (
 	"github.com/cbwinslow/cbwsh/pkg/secrets"
 	"github.com/cbwinslow/cbwsh/pkg/shell"
 	"github.com/cbwinslow/cbwsh/pkg/ssh"
+	"github.com/cbwinslow/cbwsh/pkg/ui/aimonitor"
 	"github.com/cbwinslow/cbwsh/pkg/ui/autocomplete"
 	"github.com/cbwinslow/cbwsh/pkg/ui/highlight"
 	"github.com/cbwinslow/cbwsh/pkg/ui/markdown"
@@ -58,19 +60,21 @@ type Model struct {
 	secretsManager   *secrets.Manager
 	sshManager       *ssh.Manager
 	aiManager        *ai.Manager
+	activityMonitor  *monitor.Monitor
 	history          *shell.History
 	jobManager       *process.JobManager
 	privilegeManager *privileges.Manager
 	logger           *logging.Logger
 
 	// UI components
-	input       textinput.Model
-	spinner     spinner.Model
-	styles      *styles.Styles
-	highlighter *highlight.ShellHighlighter
-	completer   *autocomplete.Completer
-	mdRenderer  *markdown.Renderer
-	menuBar     *menu.MenuBar
+	input        textinput.Model
+	spinner      spinner.Model
+	styles       *styles.Styles
+	highlighter  *highlight.ShellHighlighter
+	completer    *autocomplete.Completer
+	mdRenderer   *markdown.Renderer
+	menuBar      *menu.MenuBar
+	monitorPane  *aimonitor.MonitorPane
 
 	// State
 	mode          Mode
@@ -81,6 +85,7 @@ type Model struct {
 	showSidebar   bool
 	showStatusBar bool
 	showMenuBar   bool
+	showMonitor   bool
 	suggestions   []core.Suggestion
 	selectedSugg  int
 	commandOutput []outputLine
@@ -105,11 +110,16 @@ type KeyMap struct {
 	SplitHorizontal key.Binding
 	ToggleSidebar   key.Binding
 	ToggleMenuBar   key.Binding
+	ToggleMonitor   key.Binding
 	CommandPalette  key.Binding
 	AIAssist        key.Binding
 	Execute         key.Binding
 	Cancel          key.Binding
 	Up              key.Binding
+	Down            key.Binding
+	Tab             key.Binding
+	Clear           key.Binding
+}
 	Down            key.Binding
 	Tab             key.Binding
 	Clear           key.Binding
@@ -153,6 +163,10 @@ func DefaultKeyMap() KeyMap {
 		ToggleSidebar: key.NewBinding(
 			key.WithKeys("ctrl+b"),
 			key.WithHelp("ctrl+b", "toggle sidebar"),
+		),
+		ToggleMonitor: key.NewBinding(
+			key.WithKeys("ctrl+m"),
+			key.WithHelp("ctrl+m", "toggle AI monitor"),
 		),
 		CommandPalette: key.NewBinding(
 			key.WithKeys("ctrl+p"),
@@ -220,6 +234,21 @@ func New() Model {
 		menuBar.AddMenu(m)
 	}
 
+	// Create activity monitor
+	monitorCfg := &monitor.Config{
+		OllamaURL:          cfg.AI.OllamaURL,
+		OllamaModel:        cfg.AI.OllamaModel,
+		MaxActivities:      100,
+		MaxRecommendations: 50,
+		AutoRecommend:      cfg.AI.EnableMonitoring,
+		RecommendInterval:  time.Duration(cfg.AI.MonitoringInterval) * time.Second,
+		MinActivityGap:     1 * time.Second,
+	}
+	activityMonitor := monitor.NewMonitor(monitorCfg)
+
+	// Create monitor pane
+	monitorPane := aimonitor.NewMonitorPane(activityMonitor)
+
 	return Model{
 		config:           cfg,
 		paneManager:      panes.NewManager(cfg.Shell.DefaultShell),
@@ -227,6 +256,7 @@ func New() Model {
 		secretsManager:   secrets.NewManager(cfg.Secrets.StorePath),
 		sshManager:       ssh.NewManager("", time.Duration(cfg.SSH.ConnectTimeout)*time.Second),
 		aiManager:        ai.NewManager(),
+		activityMonitor:  activityMonitor,
 		history:          shell.NewHistory(cfg.Shell.HistorySize, cfg.Shell.HistoryPath),
 		jobManager:       process.NewJobManager(100),
 		privilegeManager: privileges.NewManager(),
@@ -238,8 +268,10 @@ func New() Model {
 		completer:        autocomplete.NewCompleter(),
 		mdRenderer:       mdRenderer,
 		menuBar:          menuBar,
+		monitorPane:      monitorPane,
 		mode:             ModeNormal,
 		showStatusBar:    cfg.UI.ShowStatusBar,
+		showMonitor:      cfg.AI.EnableMonitoring,
 		commandOutput:    make([]outputLine, 0),
 	}
 }
@@ -252,9 +284,15 @@ func (m Model) Init() tea.Cmd {
 	// Load history
 	_ = m.history.Load()
 
+	// Start activity monitor if enabled
+	if m.showMonitor && m.activityMonitor != nil {
+		m.activityMonitor.Start()
+	}
+
 	return tea.Batch(
 		textinput.Blink,
 		m.spinner.Tick,
+		aimonitor.Tick(),
 	)
 }
 
@@ -267,7 +305,17 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.width = msg.Width
 		m.height = msg.Height
 		m.input.Width = msg.Width - 10
-		m.paneManager.UpdateAllSizes(msg.Width, msg.Height-4)
+		
+		// Calculate available width for panes and monitor
+		availableWidth := msg.Width
+		monitorWidth := 0
+		if m.showMonitor && m.monitorPane != nil {
+			monitorWidth = msg.Width / 3 // Monitor takes 1/3 of width
+			availableWidth = msg.Width - monitorWidth
+			m.monitorPane.SetSize(monitorWidth, msg.Height-4)
+		}
+		
+		m.paneManager.UpdateAllSizes(availableWidth, msg.Height-4)
 		m.menuBar.SetWidth(msg.Width)
 		m.ready = true
 		return m, nil
@@ -388,6 +436,22 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.showSidebar = !m.showSidebar
 			return m, nil
 
+		case key.Matches(msg, keys.ToggleMonitor):
+			m.showMonitor = !m.showMonitor
+			if m.monitorPane != nil {
+				m.monitorPane.Toggle()
+			}
+			if m.showMonitor && m.activityMonitor != nil {
+				m.activityMonitor.Start()
+			} else if m.activityMonitor != nil {
+				m.activityMonitor.Stop()
+			}
+			// Force resize to accommodate the monitor pane
+			if m.ready {
+				return m.Update(tea.WindowSizeMsg{Width: m.width, Height: m.height})
+			}
+			return m, nil
+
 		case key.Matches(msg, keys.ToggleMenuBar):
 			m.menuBar.Toggle()
 			m.showMenuBar = m.menuBar.IsOpen()
@@ -410,6 +474,17 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.addOutput(result.Error, false, result.ExitCode)
 		}
 		m.logger.Debugf("Command completed: %s (exit code: %d)", result.Command, result.ExitCode)
+		
+		// Record activity to monitor
+		if m.activityMonitor != nil && m.activityMonitor.IsEnabled() {
+			pane := m.paneManager.ActivePane()
+			workDir := "~"
+			if pane != nil {
+				workDir = pane.GetShellExecutor().GetWorkingDirectory()
+			}
+			m.activityMonitor.RecordCommand(&result, workDir)
+		}
+		
 		return m, nil
 
 	case spinner.TickMsg:
@@ -430,6 +505,15 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if _, ok := msg.(tea.KeyMsg); ok {
 			m.suggestions = nil
 		}
+	}
+
+	// Update monitor pane
+	if m.monitorPane != nil {
+		var cmd tea.Cmd
+		var updatedPane *aimonitor.MonitorPane
+		updatedPane, cmd = m.monitorPane.Update(msg)
+		m.monitorPane = updatedPane
+		cmds = append(cmds, cmd)
 	}
 
 	return m, tea.Batch(cmds...)
@@ -577,9 +661,17 @@ func (m Model) View() string {
 	header := m.renderHeader()
 	sections = append(sections, header)
 
-	// Main content
-	content := m.renderContent()
-	sections = append(sections, content)
+	// Main content area (with monitor pane if visible)
+	var mainArea string
+	if m.showMonitor && m.monitorPane != nil {
+		// Split layout: content on left, monitor on right
+		content := m.renderContent()
+		monitorView := m.monitorPane.View()
+		mainArea = lipgloss.JoinHorizontal(lipgloss.Top, content, monitorView)
+	} else {
+		mainArea = m.renderContent()
+	}
+	sections = append(sections, mainArea)
 
 	// Input area
 	inputArea := m.renderInput()
@@ -706,6 +798,33 @@ func (m Model) renderHelp() string {
 | Tab | Autocomplete |
 | ↑/↓ | Navigate history |
 | Ctrl+L | Clear screen |
+| Ctrl+N | New pane |
+| Ctrl+W | Close pane |
+| Ctrl+] | Next pane |
+| Ctrl+[ | Previous pane |
+| Ctrl+\ | Split vertical |
+| Ctrl+- | Split horizontal |
+| Ctrl+B | Toggle sidebar |
+| Ctrl+M | Toggle AI monitor |
+| Ctrl+A | AI assist mode |
+| Ctrl+? | Help |
+
+## Built-in Commands
+
+- **cd** - Change directory
+- **clear** - Clear screen
+- **exit** - Exit shell
+- **help** - Show this help
+
+Press any key to return...
+`
+
+	rendered, err := m.mdRenderer.Render(helpText)
+	if err != nil {
+		return helpText
+	}
+	return rendered
+}
 | Ctrl+N | New pane |
 | Ctrl+W | Close pane |
 | Ctrl+] | Next pane |

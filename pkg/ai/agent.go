@@ -61,6 +61,8 @@ func (a *Agent) Query(_ context.Context, prompt string) (string, error) {
 		return a.mockGeminiQuery(prompt)
 	case core.AIProviderLocal:
 		return a.mockLocalQuery(prompt)
+	case core.AIProviderOllama:
+		return a.mockOllamaQuery(prompt)
 	default:
 		return "", errors.New("no AI provider configured")
 	}
@@ -176,6 +178,10 @@ func (a *Agent) mockGeminiQuery(prompt string) (string, error) {
 }
 
 func (a *Agent) mockLocalQuery(prompt string) (string, error) {
+	return a.mockOpenAIQuery(prompt) // Same mock behavior
+}
+
+func (a *Agent) mockOllamaQuery(prompt string) (string, error) {
 	return a.mockOpenAIQuery(prompt) // Same mock behavior
 }
 
