@@ -195,6 +195,8 @@ get_latest_version() {
     fi
     
     # Parse tag_name from JSON response
+    # Note: This uses sed for portability. For production use, consider using 'jq' if available:
+    #   VERSION=$(echo "$response" | jq -r .tag_name)
     VERSION=$(echo "$response" | sed -n 's/.*"tag_name":"\([^"]*\)".*/\1/p')
 
     if [[ -z "$VERSION" || "$VERSION" == "null" ]]; then

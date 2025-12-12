@@ -16,6 +16,8 @@ builds:
 
 archives:
   - format: tar.gz
+    # Name template to match install script expectations: {project}_{os}_{arch}.tar.gz
+    # Architecture mapping: arm -> armv7 to match common Linux ARM naming conventions
     name_template: >-
       {{ .ProjectName }}_
       {{- .Os }}_
