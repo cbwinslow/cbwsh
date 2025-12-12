@@ -192,7 +192,7 @@ func (m *Manager) Create() (core.Pane, error) {
 	m.panes[pane.ID()] = pane
 
 	// If this is the first pane, activate it
-	if len(m.panes) == 1 {
+	if m.activePaneID == "" {
 		m.activePaneID = pane.ID()
 		pane.Activate()
 	}
