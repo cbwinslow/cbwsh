@@ -187,11 +187,15 @@ check_dependencies() {
 get_latest_version() {
     info "Fetching latest version..."
     
+    local response
     if command -v curl &> /dev/null; then
-        VERSION=$(curl -fsSL "https://api.github.com/repos/${GITHUB_REPO}/releases/latest" | grep '"tag_name"' | sed -E 's/.*"([^"]+)".*/\1/')
+        response=$(curl -fsSL "https://api.github.com/repos/${GITHUB_REPO}/releases/latest")
     else
-        VERSION=$(wget -qO- "https://api.github.com/repos/${GITHUB_REPO}/releases/latest" | grep '"tag_name"' | sed -E 's/.*"([^"]+)".*/\1/')
+        response=$(wget -qO- "https://api.github.com/repos/${GITHUB_REPO}/releases/latest")
     fi
+    
+    # Parse tag_name from JSON response
+    VERSION=$(echo "$response" | sed -n 's/.*"tag_name":"\([^"]*\)".*/\1/p')
 
     if [[ -z "$VERSION" || "$VERSION" == "null" ]]; then
         error "Could not determine latest version. Please specify a version with --version."
@@ -320,8 +324,8 @@ verify_installation() {
     info "Verifying installation..."
 
     if command -v "${PREFIX}/${BINARY_NAME}" &> /dev/null; then
-        local version_output
-        version_output=$("${PREFIX}/${BINARY_NAME}" --version 2>/dev/null || echo "installed")
+        # Try to get version, but don't fail if --version flag isn't supported
+        "${PREFIX}/${BINARY_NAME}" --version 2>/dev/null || true
         success "cbwsh is installed and ready to use!"
     else
         # Check if PREFIX is in PATH
