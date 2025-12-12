@@ -2,6 +2,7 @@
 package config
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"sync"
@@ -224,28 +225,59 @@ func Default() *Config {
 }
 
 // Load loads configuration from a file.
+//
+// This function:
+//   1. Creates a default configuration
+//   2. Attempts to read the config file
+//   3. Merges file settings with defaults
+//   4. Returns the merged configuration
+//
+// If the file doesn't exist, default configuration is returned without error.
+// This allows cbwsh to run with defaults if no config file is present.
+//
+// Parameters:
+//   - path: Path to the configuration file
+//
+// Returns:
+//   - *Config: Loaded configuration (or defaults if file doesn't exist)
+//   - error: Any error that occurred during loading (except file not found)
 func Load(path string) (*Config, error) {
+	// Start with default configuration
 	cfg := Default()
 
+	// Read configuration file
 	data, err := os.ReadFile(path)
 	if err != nil {
+		// If file doesn't exist, return defaults (not an error)
 		if os.IsNotExist(err) {
 			return cfg, nil
 		}
-		return nil, err
+		// Other errors are returned (e.g., permission denied)
+		return nil, fmt.Errorf("failed to read config file %s: %w", path, err)
 	}
 
+	// Parse YAML configuration
 	if err := yaml.Unmarshal(data, cfg); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to parse config file %s: %w", path, err)
 	}
 
 	return cfg, nil
 }
 
 // LoadFromDefaultPath loads configuration from the default path.
+//
+// The default path is ~/.cbwsh/config.yaml. If the home directory cannot
+// be determined or the config file doesn't exist, default configuration
+// is returned.
+//
+// Returns:
+//   - *Config: Loaded configuration or defaults
+//   - error: Any error that occurred during loading
 func LoadFromDefaultPath() (*Config, error) {
 	homeDir, err := os.UserHomeDir()
 	if err != nil {
+		// If we can't get home dir, return defaults
+		// This allows cbwsh to run even in unusual environments
 		return Default(), nil
 	}
 
@@ -254,21 +286,42 @@ func LoadFromDefaultPath() (*Config, error) {
 }
 
 // Save saves configuration to a file.
+//
+// This function:
+//   1. Creates the directory if it doesn't exist
+//   2. Marshals the configuration to YAML
+//   3. Writes to the file with secure permissions (0600)
+//
+// The directory is created with mode 0700 (user-only access).
+// The file is written with mode 0600 (user read/write only).
+//
+// Parameters:
+//   - path: Path where configuration should be saved
+//
+// Returns:
+//   - error: Any error that occurred during saving
 func (c *Config) Save(path string) error {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
 
+	// Ensure directory exists with secure permissions
 	dir := filepath.Dir(path)
 	if err := os.MkdirAll(dir, 0o700); err != nil {
-		return err
+		return fmt.Errorf("failed to create config directory %s: %w", dir, err)
 	}
 
+	// Marshal configuration to YAML
 	data, err := yaml.Marshal(c)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to marshal config: %w", err)
 	}
 
-	return os.WriteFile(path, data, 0o600)
+	// Write with secure permissions (user-only read/write)
+	if err := os.WriteFile(path, data, 0o600); err != nil {
+		return fmt.Errorf("failed to write config file %s: %w", path, err)
+	}
+
+	return nil
 }
 
 // SaveToDefaultPath saves configuration to the default path.

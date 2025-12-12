@@ -1,4 +1,17 @@
 // Package shell provides shell execution functionality for cbwsh.
+//
+// This package implements the core.Executor interface to run shell commands
+// in bash or zsh. It handles command execution, output capture, error handling,
+// environment variable management, and command aliases.
+//
+// Key features:
+//   - Synchronous and asynchronous command execution
+//   - Command streaming with real-time output
+//   - Environment variable management
+//   - Command aliasing
+//   - Working directory management
+//   - Signal handling and command interruption
+//   - Persistent command history
 package shell
 
 import (
@@ -16,18 +29,40 @@ import (
 )
 
 // Executor implements the core.Executor interface for running shell commands.
+//
+// The Executor manages shell command execution with support for:
+//   - Multiple shell types (bash, zsh)
+//   - Environment variable customization
+//   - Command aliases
+//   - Working directory management
+//   - Concurrent execution with proper locking
+//
+// It is safe for concurrent use by multiple goroutines.
 type Executor struct {
-	mu         sync.RWMutex
-	shellType  core.ShellType
-	workingDir string
-	env        map[string]string
-	currentCmd *exec.Cmd
-	aliases    map[string]string
+	mu         sync.RWMutex          // Protects concurrent access to fields
+	shellType  core.ShellType        // Type of shell to use (bash/zsh)
+	workingDir string                // Current working directory
+	env        map[string]string     // Custom environment variables
+	currentCmd *exec.Cmd             // Currently executing command (if any)
+	aliases    map[string]string     // Command aliases map
 }
 
-// NewExecutor creates a new shell executor.
+// NewExecutor creates a new shell executor for the specified shell type.
+//
+// The executor is initialized with:
+//   - The current working directory
+//   - Empty environment variables map
+//   - Empty aliases map
+//
+// Parameters:
+//   - shellType: The type of shell to use (core.ShellTypeBash or core.ShellTypeZsh)
+//
+// Returns:
+//   - A configured Executor ready to run commands
 func NewExecutor(shellType core.ShellType) *Executor {
+	// Get current working directory, fallback to empty string if error
 	wd, _ := os.Getwd()
+	
 	return &Executor{
 		shellType:  shellType,
 		workingDir: wd,
@@ -36,13 +71,33 @@ func NewExecutor(shellType core.ShellType) *Executor {
 	}
 }
 
-// Execute runs a command and returns the result.
+// Execute runs a shell command synchronously and returns the result.
+//
+// This method:
+//   1. Expands any command aliases
+//   2. Executes the command in the configured shell
+//   3. Captures stdout and stderr
+//   4. Returns the result with timing information
+//
+// The command runs in the current working directory with any custom
+// environment variables applied. Command execution can be cancelled
+// via the provided context.
+//
+// Parameters:
+//   - ctx: Context for cancellation and timeout control
+//   - command: The shell command to execute
+//
+// Returns:
+//   - *core.CommandResult: Result containing output, errors, and exit code
+//   - error: Always nil (errors are returned in CommandResult)
 func (e *Executor) Execute(ctx context.Context, command string) (*core.CommandResult, error) {
 	e.mu.Lock()
+	// Expand aliases before execution
 	command = e.expandAliases(command)
 
 	startTime := time.Now()
 
+	// Prepare command execution
 	shell := e.getShellPath()
 	cmd := exec.CommandContext(ctx, shell, "-c", command)
 	cmd.Dir = e.workingDir
@@ -50,26 +105,33 @@ func (e *Executor) Execute(ctx context.Context, command string) (*core.CommandRe
 	e.currentCmd = cmd
 	e.mu.Unlock()
 
+	// Execute command and capture combined output
 	output, err := cmd.CombinedOutput()
 
+	// Clear current command reference
 	e.mu.Lock()
 	e.currentCmd = nil
 	e.mu.Unlock()
 
+	// Build result with timing information
 	result := &core.CommandResult{
 		Command:  command,
 		Duration: time.Since(startTime).Milliseconds(),
 	}
 
+	// Process execution result
 	if err != nil {
+		// Handle exit errors with proper exit codes
 		if exitErr, ok := err.(*exec.ExitError); ok {
 			result.ExitCode = exitErr.ExitCode()
 			result.Error = string(output)
 		} else {
+			// Handle other errors (e.g., command not found)
 			result.ExitCode = -1
 			result.Error = err.Error()
 		}
 	} else {
+		// Success case
 		result.Output = string(output)
 		result.ExitCode = 0
 	}
