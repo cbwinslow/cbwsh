@@ -14,6 +14,25 @@ builds:
     flags: ["-trimpath"]
     targets: ["go_first_class"]
 
+archives:
+  - format: tar.gz
+    # Name template to match install script expectations: {project}_{os}_{arch}.tar.gz
+    # Architecture mapping: arm -> armv7 to match common Linux ARM naming conventions
+    name_template: >-
+      {{ .ProjectName }}_
+      {{- .Os }}_
+      {{- if eq .Arch "amd64" }}amd64
+      {{- else if eq .Arch "386" }}386
+      {{- else if eq .Arch "arm64" }}arm64
+      {{- else if eq .Arch "arm" }}armv7
+      {{- else }}{{ .Arch }}{{ end }}
+    format_overrides:
+      - goos: windows
+        format: zip
+    files:
+      - README.md
+      - LICENSE
+
 changelog:
   sort: asc
   use: github
