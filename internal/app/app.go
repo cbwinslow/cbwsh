@@ -219,7 +219,10 @@ func New(configPath string) (Model, error) {
 			return Model{}, fmt.Errorf("failed to load config from %s: %w", configPath, err)
 		}
 	} else {
-		cfg = config.Default()
+		cfg, err = config.LoadFromDefaultPath()
+		if err != nil {
+			return Model{}, fmt.Errorf("failed to load config from default path: %w", err)
+		}
 	}
 
 	// Validate configuration
