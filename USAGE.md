@@ -272,7 +272,7 @@ cbwsh integrates AI to enhance your shell experience.
 
 1. **Install Ollama**:
    ```bash
-   curl https://ollama.ai/install.sh | sh
+   curl https://ollama.com/install.sh | sh
    ```
 
 2. **Pull a model**:
