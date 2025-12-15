@@ -51,19 +51,17 @@ func (e *Executor) Execute(ctx context.Context, command string) (*core.CommandRe
 		return nil, fmt.Errorf("command cannot be empty")
 	}
 
+	// Get shell path and check before acquiring lock
+	shell := e.getShellPath()
+	if shell == "" {
+		return nil, fmt.Errorf("no suitable shell found")
+	}
+
 	e.mu.Lock()
 	// Expand aliases before execution
 	command = e.expandAliases(command)
 
 	startTime := time.Now()
-
-	// Get shell path and create command
-	shell := e.getShellPath()
-	if shell == "" {
-		e.mu.Unlock()
-		return nil, fmt.Errorf("no suitable shell found")
-	}
-
 	cmd := exec.CommandContext(ctx, shell, "-c", command)
 	cmd.Dir = e.workingDir
 	cmd.Env = e.buildEnv()
