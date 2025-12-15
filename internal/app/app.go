@@ -1,4 +1,12 @@
-// Package app provides the main application for cbwsh.
+// Package app provides the main application logic for cbwsh.
+//
+// This package implements the Bubble Tea-based terminal user interface,
+// managing the application state, handling user input, and coordinating
+// between various subsystems like shell execution, AI integration,
+// pane management, and more.
+//
+// The main entry point is the Run() function, which creates and starts
+// the Bubble Tea program with proper initialization and error handling.
 package app
 
 import (
@@ -205,32 +213,49 @@ func DefaultKeyMap() KeyMap {
 
 var keys = DefaultKeyMap()
 
-// New creates a new application model.
+// New creates a new application model with all subsystems initialized.
+//
+// This function sets up:
+//   - Configuration from default settings
+//   - UI components (text input, spinner, markdown renderer)
+//   - Shell subsystems (pane manager, history, job manager)
+//   - AI components (manager, activity monitor, monitor pane)
+//   - Security components (secrets manager, SSH manager, privileges)
+//   - Logging infrastructure
+//
+// The returned Model is ready to be used with Bubble Tea's NewProgram.
+// Any initialization errors are logged but do not prevent the application
+// from starting with degraded functionality.
 func New() Model {
+	// Load configuration with defaults
 	cfg := config.Default()
 
+	// Initialize text input for command entry
 	ti := textinput.New()
 	ti.Placeholder = "Enter command..."
 	ti.Focus()
 	ti.CharLimit = 1000
 	ti.Width = 80
 
+	// Initialize spinner for command execution feedback
 	s := spinner.New()
 	s.Spinner = spinner.Dot
 	s.Style = lipgloss.NewStyle().Foreground(lipgloss.Color("205"))
 
+	// Initialize markdown renderer for help and AI responses
+	// Error is ignored as the renderer has a fallback mode
 	mdRenderer, _ := markdown.NewRenderer()
 
-	// Create logger
+	// Create logger for application diagnostics
 	logger := logging.New(logging.WithLevel(logging.LevelInfo))
 
-	// Create menu bar with default menus
+	// Create menu bar with default menus (File, Edit, View, Help)
 	menuBar := menu.NewMenuBar()
 	for _, m := range menu.CreateDefaultMenus() {
 		menuBar.AddMenu(m)
 	}
 
-	// Create activity monitor
+	// Create activity monitor for AI-powered shell recommendations
 	monitorCfg := &monitor.Config{
 		OllamaURL:          cfg.AI.OllamaURL,
 		OllamaModel:        cfg.AI.OllamaModel,
@@ -242,7 +267,7 @@ func New() Model {
 	}
 	activityMonitor := monitor.NewMonitor(monitorCfg)
 
-	// Create monitor pane
+	// Create monitor pane UI component
 	monitorPane := aimonitor.NewMonitorPane(activityMonitor)
 
 	return Model{
@@ -272,23 +297,39 @@ func New() Model {
 	}
 }
 
-// Init initializes the application.
+// Init initializes the application after the model is created.
+//
+// This is called by Bubble Tea before the first Update. It performs
+// startup tasks like:
+//   - Creating the initial shell pane
+//   - Loading command history from disk
+//   - Starting the AI activity monitor if enabled
+//   - Initializing UI component animations
+//
+// Returns a batch of commands to start the application's event loop.
 func (m Model) Init() tea.Cmd {
-	// Create initial pane
-	_, _ = m.paneManager.Create()
+	// Create initial pane for shell interaction
+	if _, err := m.paneManager.Create(); err != nil {
+		// Log error but continue - the user can create panes manually
+		m.logger.Errorf("Failed to create initial pane: %v", err)
+	}
 
-	// Load history
-	_ = m.history.Load()
+	// Load command history from persistent storage
+	if err := m.history.Load(); err != nil {
+		// Log error but continue - history will be empty
+		m.logger.Warnf("Failed to load command history: %v", err)
+	}
 
-	// Start activity monitor if enabled
+	// Start activity monitor if enabled in configuration
 	if m.showMonitor && m.activityMonitor != nil {
 		m.activityMonitor.Start()
 	}
 
+	// Return initial commands to start UI animations
 	return tea.Batch(
-		textinput.Blink,
-		m.spinner.Tick,
-		aimonitor.Tick(),
+		textinput.Blink,   // Start cursor blinking
+		m.spinner.Tick,    // Start spinner animation
+		aimonitor.Tick(),  // Start AI monitor updates
 	)
 }
 
@@ -517,51 +558,74 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 type commandResultMsg core.CommandResult
 
+// executeCommand processes and executes a user command.
+//
+// This function:
+//   - Validates the command is not empty
+//   - Adds the command to history for recall
+//   - Displays the command in the output
+//   - Checks if it's a built-in command (cd, exit, etc.)
+//   - Executes external commands via the shell executor
+//
+// Returns the updated model and any commands to run.
 func (m Model) executeCommand() (tea.Model, tea.Cmd) {
 	command := strings.TrimSpace(m.input.Value())
 	if command == "" {
 		return m, nil
 	}
 
-	// Add to history
+	// Add to command history for up/down arrow recall
 	m.history.Add(command)
 	m.history.Reset()
 
-	// Show command in output
+	// Show command in output with current prompt
 	m.addOutput(m.getPrompt()+command, true, 0)
 
-	// Handle built-in commands
+	// Handle built-in commands (cd, exit, help, etc.)
 	if handled, model := m.handleBuiltin(command); handled {
 		m.input.Reset()
 		return model, nil
 	}
 
-	// Execute command
+	// Execute external command via shell
 	m.executing = true
 	m.input.Reset()
 
 	return m, tea.Batch(
-		m.spinner.Tick,
-		m.runCommand(command),
+		m.spinner.Tick,      // Show spinner while executing
+		m.runCommand(command), // Run the command asynchronously
 	)
 }
 
+// runCommand executes a shell command and returns the result as a message.
+//
+// This function runs asynchronously in the background and sends a
+// commandResultMsg when complete. It handles:
+//   - Checking for an active pane
+//   - Executing the command via the shell executor
+//   - Capturing output, errors, and exit codes
+//   - Proper error handling and reporting
+//
+// Returns a tea.Cmd that will send a commandResultMsg when the command completes.
 func (m *Model) runCommand(command string) tea.Cmd {
 	return func() tea.Msg {
+		// Ensure we have an active pane to run the command in
 		pane := m.paneManager.ActivePane()
 		if pane == nil {
 			return commandResultMsg{
 				Command:  command,
-				Error:    "No active pane",
+				Error:    "No active pane available. Press Ctrl+N to create a new pane.",
 				ExitCode: -1,
 			}
 		}
 
+		// Execute the command with a background context
+		// Context allows for future cancellation support
 		result, err := pane.GetShellExecutor().Execute(context.Background(), command)
 		if err != nil {
 			return commandResultMsg{
 				Command:  command,
-				Error:    err.Error(),
+				Error:    fmt.Sprintf("Execution failed: %v", err),
 				ExitCode: -1,
 			}
 		}
@@ -570,6 +634,20 @@ func (m *Model) runCommand(command string) tea.Cmd {
 	}
 }
 
+// handleBuiltin processes built-in shell commands.
+//
+// Built-in commands are handled directly by cbwsh rather than being
+// passed to the underlying shell. This includes:
+//   - exit, quit: Exit the shell
+//   - clear: Clear the output buffer
+//   - cd: Change working directory
+//   - help: Show help information
+//   - jobs: List background jobs
+//   - whoami: Show current user
+//
+// Returns:
+//   - bool: true if the command was handled as a built-in
+//   - tea.Model: the updated model (may be modified by the command)
 func (m *Model) handleBuiltin(command string) (bool, tea.Model) {
 	parts := strings.Fields(command)
 	if len(parts) == 0 {
@@ -578,18 +656,28 @@ func (m *Model) handleBuiltin(command string) (bool, tea.Model) {
 
 	switch parts[0] {
 	case "exit", "quit":
+		// Exit handled by returning without action - caller will quit
 		return true, m
+		
 	case "clear":
+		// Clear output buffer
 		m.commandOutput = m.commandOutput[:0]
 		return true, m
+		
 	case "cd":
+		// Change working directory
 		if len(parts) > 1 {
 			pane := m.paneManager.ActivePane()
 			if pane != nil {
 				if err := pane.GetShellExecutor().SetWorkingDirectory(parts[1]); err != nil {
-					m.lastError = err.Error()
+					m.lastError = fmt.Sprintf("cd: %v", err)
+					m.addOutput(m.lastError, false, 1)
 				}
+			} else {
+				m.addOutput("cd: No active pane", false, 1)
 			}
+		} else {
+			m.addOutput("cd: missing directory argument", false, 1)
 		}
 		return true, m
 	case "help":
@@ -822,14 +910,34 @@ Press any key to return...
 	return rendered
 }
 
-// Run starts the application.
-// Run starts the application.
+// Run starts the cbwsh application.
+//
+// This is the main entry point for running the shell. It:
+//   - Creates a new application model with all subsystems initialized
+//   - Configures the Bubble Tea program with alt screen and mouse support
+//   - Starts the main event loop
+//   - Returns any errors that occur during initialization or execution
+//
+// The application runs in alt screen mode, preserving the terminal state
+// before cbwsh started. Mouse support is enabled for UI interactions.
+//
+// Returns:
+//   - nil on successful completion (user quit normally)
+//   - error if the application failed to start or encountered a fatal error
 func Run() error {
+	// Create and configure the Bubble Tea program
 	p := tea.NewProgram(
-		New(),
-		tea.WithAltScreen(),
-		tea.WithMouseCellMotion(),
+		New(),                      // Initialize application model
+		tea.WithAltScreen(),        // Use alternate screen buffer
+		tea.WithMouseCellMotion(),  // Enable mouse support for UI
 	)
+	
+	// Run the program and return any errors
+	// The first return value (final model) is ignored as we don't need it
 	_, err := p.Run()
-	return err
+	if err != nil {
+		return fmt.Errorf("application error: %w", err)
+	}
+	
+	return nil
 }

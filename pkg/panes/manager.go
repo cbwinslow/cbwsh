@@ -1,4 +1,15 @@
 // Package panes provides terminal pane management for cbwsh.
+//
+// This package implements the multi-pane functionality that allows users
+// to work with multiple shell sessions simultaneously. Features include:
+//   - Creating and destroying panes
+//   - Switching between panes
+//   - Splitting panes (horizontal/vertical)
+//   - Resizing panes
+//   - Independent shell executors per pane
+//
+// Each pane maintains its own shell executor, output buffer, and state,
+// allowing for parallel command execution across multiple panes.
 package panes
 
 import (
@@ -11,22 +22,38 @@ import (
 )
 
 // Pane represents a terminal pane with its own shell executor.
+//
+// Each pane is an independent shell session that can execute commands,
+// maintain its own output buffer, and be resized or repositioned.
+// Panes are thread-safe for concurrent access.
 type Pane struct {
-	mu       sync.RWMutex
-	id       string
-	title    string
-	active   bool
-	width    int
-	height   int
-	executor *shell.Executor
-	output   []string
-	scrollY  int
+	mu       sync.RWMutex       // Protects concurrent access
+	id       string             // Unique identifier for the pane
+	title    string             // Display title
+	active   bool               // Whether this pane is currently active
+	width    int                // Pane width in characters
+	height   int                // Pane height in lines
+	executor *shell.Executor    // Shell command executor
+	output   []string           // Command output buffer
+	scrollY  int                // Vertical scroll position
 }
 
-// NewPane creates a new pane.
+// NewPane creates a new pane with its own shell executor.
+//
+// The pane is initialized with:
+//   - A unique 8-character UUID-based identifier
+//   - Default title "Shell"
+//   - A new shell executor for the specified shell type
+//   - Empty output buffer
+//
+// Parameters:
+//   - shellType: The type of shell to use (bash or zsh)
+//
+// Returns:
+//   - A new Pane ready to execute commands
 func NewPane(shellType core.ShellType) *Pane {
 	return &Pane{
-		id:       uuid.New().String()[:8],
+		id:       uuid.New().String()[:8], // Use first 8 chars of UUID
 		title:    "Shell",
 		executor: shell.NewExecutor(shellType),
 		output:   make([]string, 0),

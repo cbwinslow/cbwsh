@@ -1,4 +1,23 @@
-// Package logging provides logging infrastructure for cbwsh.
+// Package logging provides structured logging infrastructure for cbwsh.
+//
+// This package implements a flexible logging system with support for:
+//   - Multiple log levels (Debug, Info, Warn, Error, Fatal)
+//   - Structured logging with fields
+//   - Multiple output destinations (stdout, stderr, files)
+//   - Customizable formatters (text, JSON)
+//   - Caller information tracking
+//   - Thread-safe concurrent logging
+//
+// Example usage:
+//
+//	logger := logging.New(
+//	    logging.WithLevel(logging.LevelInfo),
+//	    logging.WithOutput(os.Stderr),
+//	)
+//
+//	logger.Info("Application started")
+//	logger.WithField("user", "alice").Info("User logged in")
+//	logger.Error("Something went wrong")
 package logging
 
 import (

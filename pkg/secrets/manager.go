@@ -1,4 +1,24 @@
 // Package secrets provides secure secrets management for cbwsh.
+//
+// This package implements encrypted storage for sensitive data like:
+//   - API keys
+//   - Passwords
+//   - SSH keys
+//   - Authentication tokens
+//
+// Security features:
+//   - AES-256-GCM encryption
+//   - Argon2id key derivation
+//   - Salt-based key generation
+//   - Secure file permissions (0600)
+//   - Memory-safe operations
+//
+// Example usage:
+//
+//	manager := secrets.NewManager("~/.cbwsh/secrets.enc")
+//	err := manager.Initialize("master-password")
+//	err = manager.Set("api_key", []byte("secret-value"))
+//	value, err := manager.Get("api_key")
 package secrets
 
 import (
@@ -19,13 +39,23 @@ import (
 )
 
 // Manager provides encrypted secrets storage and retrieval.
+//
+// The Manager uses AES-256-GCM encryption with Argon2id key derivation
+// to securely store secrets. All operations are thread-safe.
+//
+// Security considerations:
+//   - Master password is never stored (only its hash)
+//   - Encryption keys are derived using Argon2id (resistant to brute-force)
+//   - AES-256-GCM provides both confidentiality and authenticity
+//   - Store files use restrictive permissions (0600)
+//   - Secrets are locked by default and require explicit unlocking
 type Manager struct {
-	mu            sync.RWMutex
-	storePath     string
-	masterKeyHash []byte
-	encryptionKey []byte
-	secrets       map[string][]byte
-	unlocked      bool
+	mu            sync.RWMutex   // Protects concurrent access
+	storePath     string         // Path to encrypted store file
+	masterKeyHash []byte         // Hash of master key for verification
+	encryptionKey []byte         // Derived encryption key (ephemeral)
+	secrets       map[string][]byte  // In-memory secrets cache (when unlocked)
+	unlocked      bool           // Whether the store is currently unlocked
 }
 
 // Argon2 parameters for key derivation.
