@@ -78,7 +78,7 @@ func printHelp() {
 	fmt.Println()
 	fmt.Println("KEY BINDINGS:")
 	fmt.Println("  Ctrl+Q          Quit")
-	fmt.Println("  Ctrl+?  or F1   Show help")
+	fmt.Println("  Ctrl+? or F1    Show help")
 	fmt.Println("  Ctrl+A          AI assist mode")
 	fmt.Println("  Ctrl+M          Toggle AI monitor")
 	fmt.Println("  Ctrl+L          Clear screen")

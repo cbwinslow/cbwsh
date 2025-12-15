@@ -51,6 +51,9 @@ A modern, modular terminal shell built with the complete [Bubble Tea](https://gi
 
 ### Installation
 
+> **Security Warning:**  
+> Before running the installation command below, please [review the install script](https://github.com/cbwinslow/cbwsh/blob/main/install.sh) to ensure you understand and trust its contents.
+
 ```bash
 # Linux/macOS - Quick install
 curl -fsSL https://raw.githubusercontent.com/cbwinslow/cbwsh/main/install.sh | bash
