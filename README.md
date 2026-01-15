@@ -6,6 +6,8 @@ A modern, modular terminal shell built with the complete [Bubble Tea](https://gi
 
 - **[Installation Guide](INSTALL.md)** - Comprehensive installation instructions for all platforms
 - **[Usage Guide](USAGE.md)** - Complete guide to using cbwsh features
+- **[Shell Research](SHELL_RESEARCH.md)** - Analysis of top 100+ GitHub shell projects
+- **[Shell Variants](SHELL_VARIANTS.md)** - Different shell variants and their use cases
 - **[Roadmap](ROADMAP.md)** - Future plans and features
 - **[TODO List](TODO.md)** - Detailed task list and progress
 
@@ -29,6 +31,8 @@ cbwsh
 - 📊 **Multiple panes**: Split terminal with different layouts (single, horizontal, vertical, grid)
 - 🔌 **Plugin system**: Extensible architecture with command, UI, hook, and formatter plugins
 - ⌨️ **Autocompletion**: Smart command, file, environment variable, and history completion
+- 📁 **Structured data**: Type-safe data pipelines for JSON, YAML, CSV (inspired by Nushell)
+- 🔍 **Data operations**: Filter, select, sort, group-by, and transform structured data
 
 ### Security & Secrets
 - 🔐 **Secrets manager**: Encrypted storage using AES-256-GCM with Argon2id key derivation
@@ -504,6 +508,49 @@ msg := &ai.A2AMessage{
 }
 response, err := router.Send(ctx, msg)
 ```
+
+## Structured Data Processing (New!)
+
+cbwsh now includes powerful structured data processing capabilities inspired by modern shells like Nushell and PowerShell. Work with JSON, YAML, and CSV using type-safe pipelines and SQL-like operations.
+
+### Quick Example
+
+```bash
+# Parse JSON and query
+cat users.json | cbwsh data parse json | where status == active | select name email
+
+# Analyze CSV data
+cat servers.csv | cbwsh data parse csv | group-by region | sort count desc
+
+# Process API data
+curl -s https://api.github.com/users/octocat/repos | \
+  cbwsh data parse json | \
+  where language == Go | \
+  select name stars forks | \
+  sort stars desc | \
+  limit 10
+```
+
+### Features
+
+- **Type-safe pipelines**: Work with structured data, not just text
+- **Multiple formats**: Native support for JSON, YAML, CSV
+- **SQL-like operations**: filter (`where`), project (`select`), aggregate (`group-by`)
+- **Composable commands**: Chain operations for complex data transformations
+- **Table formatting**: Beautiful table output with Unicode borders
+
+See [examples/data/](examples/data/) for more examples and [SHELL_VARIANTS.md](SHELL_VARIANTS.md) for details on the data processing variant.
+
+## Research-Driven Development
+
+cbwsh is built on research from analyzing 100+ top GitHub shell repositories. Key insights:
+
+- **Modern shells prioritize UX**: Autosuggestions, syntax highlighting, and error prevention
+- **Structured data is the future**: Type-safe pipelines beat text parsing
+- **AI integration is becoming standard**: Natural language commands and error fixes
+- **Developer tools matter**: Git, Docker, Kubernetes integrations drive adoption
+
+See [SHELL_RESEARCH.md](SHELL_RESEARCH.md) for the complete analysis and [SHELL_VARIANTS.md](SHELL_VARIANTS.md) for planned shell variants.
 
 ## Development
 
