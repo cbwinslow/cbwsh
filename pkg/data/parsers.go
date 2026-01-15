@@ -140,20 +140,13 @@ func NewCSVParser() *CSVParser {
 
 // Parse parses CSV bytes into a table
 func (p *CSVParser) Parse(data []byte) (*Table, error) {
-	reader := csv.NewReader(strings.NewReader(string(data)))
-	reader.Comma = p.Delimiter
-	return p.ParseReader(reader)
+	return p.ParseReader(strings.NewReader(string(data)))
 }
 
 // ParseReader parses CSV from a reader into a table
 func (p *CSVParser) ParseReader(r io.Reader) (*Table, error) {
-	var reader *csv.Reader
-	if csvReader, ok := r.(*csv.Reader); ok {
-		reader = csvReader
-	} else {
-		reader = csv.NewReader(r)
-		reader.Comma = p.Delimiter
-	}
+	reader := csv.NewReader(r)
+	reader.Comma = p.Delimiter
 	
 	table := NewTable()
 	
