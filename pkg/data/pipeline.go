@@ -289,9 +289,9 @@ func (f *JSONFormatter) Format(table *Table) string {
 	var err error
 	
 	if f.Pretty {
-		data, err = jsonMarshalIndent(result, "", "  ")
+		data, err = json.MarshalIndent(result, "", "  ")
 	} else {
-		data, err = jsonMarshal(result)
+		data, err = json.Marshal(result)
 	}
 	
 	if err != nil {
@@ -299,13 +299,4 @@ func (f *JSONFormatter) Format(table *Table) string {
 	}
 	
 	return string(data)
-}
-
-// Helper functions for JSON formatting
-func jsonMarshal(v interface{}) ([]byte, error) {
-	return json.Marshal(v)
-}
-
-func jsonMarshalIndent(v interface{}, prefix, indent string) ([]byte, error) {
-	return json.MarshalIndent(v, prefix, indent)
 }

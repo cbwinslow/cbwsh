@@ -32,9 +32,8 @@ const (
 
 // Value represents a typed value in the data pipeline
 type Value struct {
-	Type  DataType    `json:"type"`
-	Data  interface{} `json:"data"`
-	raw   []byte      // Original raw data for caching
+	Type DataType    `json:"type"`
+	Data interface{} `json:"data"`
 }
 
 // NewValue creates a new typed value

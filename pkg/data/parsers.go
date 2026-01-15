@@ -168,7 +168,9 @@ func (p *CSVParser) ParseReader(r io.Reader) (*Table, error) {
 		startIdx = 1
 	} else {
 		// Generate column names: col0, col1, col2, etc.
-		for i := 0; i < len(records[0]); i++ {
+		// Safety: records[0] exists (checked at line 159)
+		numColumns := len(records[0])
+		for i := 0; i < numColumns; i++ {
 			headers = append(headers, fmt.Sprintf("col%d", i))
 		}
 	}
