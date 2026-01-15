@@ -8,6 +8,7 @@ import (
 	"os"
 	"path/filepath"
 	"sort"
+	"strings"
 )
 
 // ComponentMetadata describes a UI component in the registry.
@@ -54,9 +55,19 @@ func (r *Registry) Register(component *ComponentMetadata) error {
 	
 	r.components[component.Name] = component
 	
-	// Add to category index
+	// Add to category index (avoid duplicates)
 	if component.Category != "" {
-		r.categories[component.Category] = append(r.categories[component.Category], component)
+		// Check if already in category
+		found := false
+		for _, existing := range r.categories[component.Category] {
+			if existing.Name == component.Name {
+				found = true
+				break
+			}
+		}
+		if !found {
+			r.categories[component.Category] = append(r.categories[component.Category], component)
+		}
 	}
 	
 	return nil
@@ -128,25 +139,24 @@ func (r *Registry) Search(query string) []*ComponentMetadata {
 }
 
 func matchesQuery(component *ComponentMetadata, query string) bool {
-	// Simple substring matching for now
-	// Could be enhanced with fuzzy matching or more sophisticated algorithms
-	query = toLower(query)
+	// Simple substring matching using standard library
+	query = strings.ToLower(query)
 	
-	if contains(toLower(component.Name), query) {
+	if strings.Contains(strings.ToLower(component.Name), query) {
 		return true
 	}
-	if contains(toLower(component.DisplayName), query) {
+	if strings.Contains(strings.ToLower(component.DisplayName), query) {
 		return true
 	}
-	if contains(toLower(component.Description), query) {
+	if strings.Contains(strings.ToLower(component.Description), query) {
 		return true
 	}
-	if contains(toLower(component.Category), query) {
+	if strings.Contains(strings.ToLower(component.Category), query) {
 		return true
 	}
 	
 	for _, tag := range component.Tags {
-		if contains(toLower(tag), query) {
+		if strings.Contains(strings.ToLower(tag), query) {
 			return true
 		}
 	}
@@ -195,32 +205,6 @@ func (r *Registry) SaveToFile(path string) error {
 	}
 	
 	return nil
-}
-
-// Helper functions
-func contains(s, substr string) bool {
-	return len(s) >= len(substr) && (s == substr || findSubstring(s, substr))
-}
-
-func findSubstring(s, substr string) bool {
-	for i := 0; i <= len(s)-len(substr); i++ {
-		if s[i:i+len(substr)] == substr {
-			return true
-		}
-	}
-	return false
-}
-
-func toLower(s string) string {
-	result := make([]byte, len(s))
-	for i := 0; i < len(s); i++ {
-		c := s[i]
-		if c >= 'A' && c <= 'Z' {
-			c = c + ('a' - 'A')
-		}
-		result[i] = c
-	}
-	return string(result)
 }
 
 // DefaultRegistry returns a registry with all built-in components registered.

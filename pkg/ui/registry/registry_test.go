@@ -3,6 +3,7 @@ package registry
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -35,10 +36,16 @@ func TestRegister(t *testing.T) {
 		t.Fatalf("Register() failed: %v", err)
 	}
 	
-	// Test duplicate registration
+	// Test duplicate registration (should not add duplicate to category)
 	err = r.Register(component)
 	if err != nil {
 		t.Errorf("Register() should allow duplicate registration: %v", err)
+	}
+	
+	// Verify component is in category only once
+	categoryComponents := r.ListByCategory("interactive")
+	if len(categoryComponents) != 1 {
+		t.Errorf("ListByCategory() returned %d components after duplicate registration, want 1", len(categoryComponents))
 	}
 	
 	// Test empty name
@@ -316,7 +323,7 @@ func TestMatchesQuery(t *testing.T) {
 }
 
 func TestHelperFunctions(t *testing.T) {
-	// Test toLower
+	// Test strings.ToLower (standard library)
 	tests := []struct {
 		input string
 		want  string
@@ -329,13 +336,13 @@ func TestHelperFunctions(t *testing.T) {
 	}
 	
 	for _, tt := range tests {
-		got := toLower(tt.input)
+		got := strings.ToLower(tt.input)
 		if got != tt.want {
-			t.Errorf("toLower(%q) = %q, want %q", tt.input, got, tt.want)
+			t.Errorf("strings.ToLower(%q) = %q, want %q", tt.input, got, tt.want)
 		}
 	}
 	
-	// Test contains
+	// Test strings.Contains (standard library)
 	containsTests := []struct {
 		s      string
 		substr string
@@ -350,9 +357,9 @@ func TestHelperFunctions(t *testing.T) {
 	}
 	
 	for _, tt := range containsTests {
-		got := contains(tt.s, tt.substr)
+		got := strings.Contains(tt.s, tt.substr)
 		if got != tt.want {
-			t.Errorf("contains(%q, %q) = %v, want %v", tt.s, tt.substr, got, tt.want)
+			t.Errorf("strings.Contains(%q, %q) = %v, want %v", tt.s, tt.substr, got, tt.want)
 		}
 	}
 }

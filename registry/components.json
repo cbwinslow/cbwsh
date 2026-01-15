@@ -19,7 +19,7 @@
   {
     "name": "card",
     "display_name": "Card",
-    "description": "A container component for grouping related content with title, content, and optional footer sections. Supports elevation (shadow) for depth and bordered style.",
+    "description": "A container component for grouping related content with title, content, and optional footer sections. Supports elevation (shadow) for depth and bordered style. Customizable padding.",
     "category": "layout",
     "files": [
       "pkg/ui/components/components.go"
