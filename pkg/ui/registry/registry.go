@@ -237,7 +237,6 @@ output := btn.Render()`,
 			Tags:        []string{"container", "layout", "card"},
 			Example: `card := components.NewCard("User Profile", "John Doe\njohn@example.com")
 card.Footer = "Last updated: 2 minutes ago"
-card.Elevated = true
 output := card.Render()`,
 		},
 		{
@@ -274,8 +273,13 @@ output := stack.Render()`,
 			Files:       []string{"pkg/ui/components/components.go"},
 			Version:     "1.0.0",
 			Tags:        []string{"status", "indicator", "icon"},
-			Example: `status := components.NewStatusIndicator("Server Running", components.StatusTypeSuccess)
+			Example: `tok := tokens.Default()
+colors := tokens.DefaultSemanticColors()
+
+status := components.NewStatusIndicator("Server Running", components.StatusTypeSuccess)
 status.ShowIcon = true
+status.Tokens = tok
+status.SemanticColors = colors
 output := status.Render()`,
 		},
 		{
@@ -287,7 +291,6 @@ output := status.Render()`,
 			Version:     "1.0.0",
 			Tags:        []string{"separator", "divider", "line"},
 			Example: `divider := components.NewDivider(50)
-divider.Char = "─"
 output := divider.Render()`,
 		},
 	}

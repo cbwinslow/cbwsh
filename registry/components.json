@@ -24,7 +24,7 @@
     "files": [
       "pkg/ui/components/components.go"
     ],
-    "example": "card := components.NewCard(\"User Profile\", \"John Doe\\njohn@example.com\")\ncard.Footer = \"Last updated: 2 minutes ago\"\ncard.Elevated = true\ncard.Bordered = true\noutput := card.Render()",
+    "example": "card := components.NewCard(\"User Profile\", \"John Doe\\njohn@example.com\")\ncard.Footer = \"Last updated: 2 minutes ago\"\noutput := card.Render()",
     "version": "1.0.0",
     "tags": [
       "container",
@@ -78,7 +78,7 @@
     "files": [
       "pkg/ui/components/components.go"
     ],
-    "example": "status := components.NewStatusIndicator(\"Server Running\", components.StatusTypeSuccess)\nstatus.ShowIcon = true\noutput := status.Render()",
+    "example": "tok := tokens.Default()\ncolors := tokens.DefaultSemanticColors()\n\nstatus := components.NewStatusIndicator(\"Server Running\", components.StatusTypeSuccess)\nstatus.ShowIcon = true\nstatus.Tokens = tok\nstatus.SemanticColors = colors\noutput := status.Render()",
     "version": "1.0.0",
     "tags": [
       "status",
@@ -95,7 +95,7 @@
     "files": [
       "pkg/ui/components/components.go"
     ],
-    "example": "divider := components.NewDivider(50)\ndivider.Char = \"─\"\noutput := divider.Render()",
+    "example": "divider := components.NewDivider(50)\noutput := divider.Render()",
     "version": "1.0.0",
     "tags": [
       "separator",
