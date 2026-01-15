@@ -2,7 +2,9 @@
 
 This directory contains example programs demonstrating various features of cbwsh.
 
-## Design System Example
+## Available Examples
+
+### Design System Example (`design_system.go`)
 
 The `design_system.go` example showcases the Figma-inspired design system, including:
 
@@ -12,11 +14,23 @@ The `design_system.go` example showcases the Figma-inspired design system, inclu
 - Layout management with stacks
 - Semantic color usage
 
-### Running the Example
+### Component Registry Browser (`registry_browser.go`)
+
+The `registry_browser.go` example demonstrates the component registry system inspired by shadcn/ui:
+
+- Browse all available components
+- Search components by name, description, or tags
+- Filter components by category
+- View component details and metadata
+- See example usage code
+- Component composition showcase
+
+### Running the Examples
 
 ```bash
 cd examples
-go run design_system.go
+go run design_system.go      # Design system demo
+go run registry_browser.go   # Component registry browser
 ```
 
 ### What You'll See

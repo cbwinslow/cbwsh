@@ -60,6 +60,7 @@ cbwsh
 - 🎭 **Themes**: Multiple color themes (default, dracula, nord, catppuccin, gruvbox, and more)
 - 🎯 **Design System**: Figma-inspired design tokens and composable components
 - 🧩 **Component Library**: Reusable UI components (buttons, cards, badges, status indicators)
+- 📦 **Component Registry**: shadcn/ui-inspired registry for discovering and using components
 
 ### Terminal Features
 - 📋 **Menu bar**: Standard File, Edit, View, Help menus with keyboard shortcuts
@@ -101,6 +102,7 @@ cbwsh/
         ├── themes/     # Theme management and hot-reloading
         ├── tokens/     # Design tokens (spacing, typography, colors)
         ├── components/ # Reusable UI components
+        ├── registry/   # Component registry system
         ├── effects/    # Visual effects (water, fluid, particles)
         ├── aichat/     # AI chat pane component
         └── editor/     # Markdown editor component
@@ -560,11 +562,58 @@ output := btn.Render()
 - **Divider**: Visual separators
 - **StatusIndicator**: Icon + label combinations for status display
 
-For complete documentation, see **[DESIGN_SYSTEM.md](DESIGN_SYSTEM.md)** and run the example:
+## Component Registry
+
+cbwsh includes a component registry system inspired by [shadcn/ui](https://ui.shadcn.com/), making it easy to discover and use UI components.
+
+### Using the Registry
+
+```go
+import "github.com/cbwinslow/cbwsh/pkg/ui/registry"
+
+// Load the registry
+reg := registry.DefaultRegistry()
+
+// List all components
+components := reg.List()
+for _, c := range components {
+    fmt.Printf("%s - %s\n", c.DisplayName, c.Description)
+}
+
+// Search for components
+results := reg.Search("status")
+
+// Get component details
+button, _ := reg.Get("button")
+fmt.Println(button.Example)
+
+// List by category
+layoutComponents := reg.ListByCategory("layout")
+```
+
+### Component Categories
+
+- **Interactive**: Components users interact with (buttons, inputs)
+- **Layout**: Components for structuring content (cards, stacks, dividers)
+- **Display**: Components for displaying information (badges, status indicators)
+
+### Registry Features
+
+- 🔍 **Searchable**: Find components by name, description, or tags
+- 📦 **Categorized**: Components organized by type
+- 📝 **Well-Documented**: Each component includes example code
+- 🎨 **Design System**: All components use consistent design tokens
+
+For complete documentation, see:
+- **[Component Registry](registry/README.md)** - Browse available components
+- **[Design System](DESIGN_SYSTEM.md)** - Complete design system documentation
+
+Run examples to see components in action:
 
 ```bash
 cd examples
-go run design_system.go
+go run registry_browser.go  # Browse the component registry
+go run design_system.go     # See all components
 ```
 
 ## Development

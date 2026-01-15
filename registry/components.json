@@ -1,0 +1,107 @@
+[
+  {
+    "name": "button",
+    "display_name": "Button",
+    "description": "A versatile button component with multiple variants (primary, secondary, danger, ghost, link) and sizes (small, medium, large). Supports icons, full-width mode, and disabled state.",
+    "category": "interactive",
+    "files": [
+      "pkg/ui/components/components.go"
+    ],
+    "example": "btn := components.NewButton(\"Save Changes\")\nbtn.Variant = components.ButtonPrimary\nbtn.Size = components.ButtonSizeMedium\nbtn.Icon = \"💾\"\noutput := btn.Render()",
+    "version": "1.0.0",
+    "tags": [
+      "interactive",
+      "action",
+      "form",
+      "button"
+    ]
+  },
+  {
+    "name": "card",
+    "display_name": "Card",
+    "description": "A container component for grouping related content with title, content, and optional footer sections. Supports elevation (shadow) for depth and bordered style.",
+    "category": "layout",
+    "files": [
+      "pkg/ui/components/components.go"
+    ],
+    "example": "card := components.NewCard(\"User Profile\", \"John Doe\\njohn@example.com\")\ncard.Footer = \"Last updated: 2 minutes ago\"\ncard.Elevated = true\ncard.Bordered = true\noutput := card.Render()",
+    "version": "1.0.0",
+    "tags": [
+      "container",
+      "layout",
+      "card",
+      "panel"
+    ]
+  },
+  {
+    "name": "badge",
+    "display_name": "Badge",
+    "description": "A small label component for status indicators and counts. Available in multiple variants: default, success (green), warning (yellow), error (red), and info (blue).",
+    "category": "display",
+    "files": [
+      "pkg/ui/components/components.go"
+    ],
+    "example": "badge := components.NewBadge(\"NEW\")\nbadge.Variant = components.BadgeInfo\noutput := badge.Render()",
+    "version": "1.0.0",
+    "tags": [
+      "label",
+      "status",
+      "indicator",
+      "badge",
+      "tag"
+    ]
+  },
+  {
+    "name": "stack",
+    "display_name": "Stack",
+    "description": "A layout component for organizing items vertically or horizontally with consistent spacing. Supports alignment options (start, center, end) and customizable spacing.",
+    "category": "layout",
+    "files": [
+      "pkg/ui/components/components.go"
+    ],
+    "example": "stack := components.NewStack(components.StackVertical)\nstack.Spacing = 8\nstack.Add(\"Item 1\")\nstack.Add(\"Item 2\")\nstack.Add(\"Item 3\")\noutput := stack.Render()",
+    "version": "1.0.0",
+    "tags": [
+      "layout",
+      "container",
+      "flex",
+      "stack",
+      "vertical",
+      "horizontal"
+    ]
+  },
+  {
+    "name": "status-indicator",
+    "display_name": "Status Indicator",
+    "description": "A component for displaying status with icon and label. Available status types: success (✓), warning (⚠), error (✗), info (ℹ), and neutral (●).",
+    "category": "display",
+    "files": [
+      "pkg/ui/components/components.go"
+    ],
+    "example": "status := components.NewStatusIndicator(\"Server Running\", components.StatusTypeSuccess)\nstatus.ShowIcon = true\noutput := status.Render()",
+    "version": "1.0.0",
+    "tags": [
+      "status",
+      "indicator",
+      "icon",
+      "state"
+    ]
+  },
+  {
+    "name": "divider",
+    "display_name": "Divider",
+    "description": "A visual separator between content sections. Customizable length and character (default: ─).",
+    "category": "layout",
+    "files": [
+      "pkg/ui/components/components.go"
+    ],
+    "example": "divider := components.NewDivider(50)\ndivider.Char = \"─\"\noutput := divider.Render()",
+    "version": "1.0.0",
+    "tags": [
+      "separator",
+      "divider",
+      "line",
+      "hr"
+    ]
+  }
+]
