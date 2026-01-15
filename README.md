@@ -6,8 +6,10 @@ A modern, modular terminal shell built with the complete [Bubble Tea](https://gi
 
 - **[Installation Guide](INSTALL.md)** - Comprehensive installation instructions for all platforms
 - **[Usage Guide](USAGE.md)** - Complete guide to using cbwsh features
+- **[Design System](DESIGN_SYSTEM.md)** - Figma-inspired design system documentation
 - **[Roadmap](ROADMAP.md)** - Future plans and features
 - **[TODO List](TODO.md)** - Detailed task list and progress
+- **[Examples](examples/)** - Example programs demonstrating features
 
 ## Quick Start
 
@@ -55,7 +57,9 @@ cbwsh
 - 📝 **Markdown editor**: Edit markdown files with live preview
 - ✨ **Visual effects**: Water waves, fluid dynamics, and particle systems using harmonica
 - 🎨 **Syntax highlighting**: Shell command highlighting with chroma
-- 🎭 **Themes**: Multiple color themes (default, dracula, nord)
+- 🎭 **Themes**: Multiple color themes (default, dracula, nord, catppuccin, gruvbox, and more)
+- 🎯 **Design System**: Figma-inspired design tokens and composable components
+- 🧩 **Component Library**: Reusable UI components (buttons, cards, badges, status indicators)
 
 ### Terminal Features
 - 📋 **Menu bar**: Standard File, Edit, View, Help menus with keyboard shortcuts
@@ -94,6 +98,9 @@ cbwsh/
         ├── autocomplete/ # Autocompletion
         ├── highlight/  # Syntax highlighting
         ├── styles/     # UI styles and themes
+        ├── themes/     # Theme management and hot-reloading
+        ├── tokens/     # Design tokens (spacing, typography, colors)
+        ├── components/ # Reusable UI components
         ├── effects/    # Visual effects (water, fluid, particles)
         ├── aichat/     # AI chat pane component
         └── editor/     # Markdown editor component
@@ -503,6 +510,61 @@ msg := &ai.A2AMessage{
     Payload: "Suggest a command to compress files",
 }
 response, err := router.Send(ctx, msg)
+```
+
+## Design System
+
+cbwsh features a comprehensive Figma-inspired design system for building consistent, composable UIs. The design system includes:
+
+### Design Tokens
+
+Following Figma's best practices, all visual properties use design tokens:
+
+- **Spacing**: 4px grid system for consistent spacing
+- **Typography**: Complete type scale (10px to 48px)
+- **Borders**: Standardized widths and radii
+- **Animations**: Consistent timing and easing
+- **Z-index**: Layering system to prevent conflicts
+- **Semantic Colors**: Meaningful color tokens for interactive states, text hierarchy, and status
+
+### Component Library
+
+Reusable, composable components with multiple variants:
+
+```go
+import (
+    "github.com/cbwinslow/cbwsh/pkg/ui/components"
+    "github.com/cbwinslow/cbwsh/pkg/ui/tokens"
+)
+
+// Create a button with design tokens
+tok := tokens.Default()
+colors := tokens.DefaultSemanticColors()
+
+btn := components.NewButton("Save Changes")
+btn.Variant = components.ButtonPrimary
+btn.Size = components.ButtonSizeMedium
+btn.Icon = "💾"
+btn.Tokens = tok
+btn.SemanticColors = colors
+
+output := btn.Render()
+```
+
+### Available Components
+
+- **Button**: Primary, secondary, danger, ghost, and link variants
+- **Card**: Structured containers with title, content, and footer
+- **Badge**: Status indicators with 5 color-coded variants
+- **Stack**: Vertical and horizontal layout containers
+- **Divider**: Visual separators
+- **StatusIndicator**: Icon + label combinations for status display
+
+For complete documentation, see **[DESIGN_SYSTEM.md](DESIGN_SYSTEM.md)** and run the example:
+
+```bash
+cd examples
+go run design_system.go
 ```
 
 ## Development
