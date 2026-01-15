@@ -2,6 +2,7 @@
 package data
 
 import (
+	"encoding/json"
 	"fmt"
 	"sort"
 	"strings"
@@ -300,11 +301,11 @@ func (f *JSONFormatter) Format(table *Table) string {
 	return string(data)
 }
 
-// Helper functions to avoid import cycles
+// Helper functions for JSON formatting
 func jsonMarshal(v interface{}) ([]byte, error) {
-	return []byte(fmt.Sprintf("%v", v)), nil
+	return json.Marshal(v)
 }
 
 func jsonMarshalIndent(v interface{}, prefix, indent string) ([]byte, error) {
-	return []byte(fmt.Sprintf("%v", v)), nil
+	return json.MarshalIndent(v, prefix, indent)
 }

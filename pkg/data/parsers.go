@@ -4,6 +4,7 @@ package data
 import (
 	"encoding/csv"
 	"encoding/json"
+	"fmt"
 	"io"
 	"strings"
 
@@ -168,7 +169,7 @@ func (p *CSVParser) ParseReader(r io.Reader) (*Table, error) {
 	} else {
 		// Generate column names: col0, col1, col2, etc.
 		for i := 0; i < len(records[0]); i++ {
-			headers = append(headers, string(rune('A'+i)))
+			headers = append(headers, fmt.Sprintf("col%d", i))
 		}
 	}
 	
