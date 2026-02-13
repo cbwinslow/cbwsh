@@ -1,0 +1,111 @@
+# Example cbwsh Configuration with Ollama (Local AI)
+# Place this file at: ~/.cbwsh/config.yaml
+
+# Shell settings
+shell:
+  default_shell: bash          # Default shell to use (bash or zsh)
+  history_size: 10000          # Number of commands to store in history
+  history_path: ~/.cbwsh/history
+  aliases:
+    ll: ls -lah
+    gs: git status
+    gd: git diff
+    gc: git commit
+  environment:
+    EDITOR: vim
+    PAGER: less
+
+# UI settings
+ui:
+  theme: default              # Theme: default, dracula, nord, tokyo-night
+  layout: single              # Layout: single, horizontal, vertical, grid
+  show_status_bar: true       # Show status bar at bottom
+  show_menu_bar: false        # Show menu bar at top
+  enable_animations: true     # Enable visual effects
+  syntax_highlighting: true   # Syntax highlight commands
+  show_line_numbers: false    # Show line numbers in output
+
+# AI settings - Using Ollama for local, privacy-focused AI
+ai:
+  provider: ollama
+  
+  # Ollama settings
+  ollama_url: http://localhost:11434
+  ollama_model: codellama     # Model: llama2, codellama, mistral, etc.
+  
+  # AI features
+  enable_suggestions: true
+  enable_monitoring: true
+  monitoring_interval: 30     # Seconds between AI recommendations
+  
+  # Suggestions settings
+  suggestion_threshold: 0.7   # Confidence threshold (0.0-1.0)
+  max_suggestions: 5          # Maximum number of suggestions to show
+
+# SSH settings
+ssh:
+  default_user: ""
+  key_path: ~/.ssh/id_rsa
+  known_hosts: ~/.ssh/known_hosts
+  timeout: 30
+  
+  # Saved hosts for quick connection
+  hosts:
+    - name: production
+      host: prod.example.com
+      user: deploy
+      port: 22
+      key_path: ~/.ssh/prod_key
+    
+    - name: staging
+      host: staging.example.com
+      user: deploy
+      port: 22
+      key_path: ~/.ssh/staging_key
+
+# Secrets settings
+secrets:
+  store_path: ~/.cbwsh/secrets.enc
+  encryption_algorithm: AES-256-GCM
+  key_derivation: argon2id
+
+# Keybindings (custom)
+keybindings:
+  quit: ctrl+q
+  help: ctrl+?
+  ai_assist: ctrl+a
+  ai_monitor: ctrl+m
+  new_pane: ctrl+n
+  close_pane: ctrl+w
+  next_pane: ctrl+]
+  prev_pane: ctrl+[
+  split_vertical: ctrl+\
+  split_horizontal: ctrl+-
+  clear_screen: ctrl+l
+  command_palette: ctrl+p
+
+# Plugins
+plugins:
+  enabled: true
+  auto_load: true
+  paths:
+    - ~/.cbwsh/plugins
+    - /usr/local/share/cbwsh/plugins
+
+# Logging
+logging:
+  enabled: true
+  level: info           # Level: debug, info, warn, error
+  path: ~/.cbwsh/logs/cbwsh.log
+  max_size: 10          # MB
+  max_backups: 3
+  max_age: 30           # Days
+
+# Advanced settings
+advanced:
+  shell_integration: true
+  cd_on_exit: false
+  save_session: true
+  restore_session: true
+  max_output_lines: 10000
+  tab_width: 4

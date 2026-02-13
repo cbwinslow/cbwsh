@@ -1,0 +1,51 @@
+# Example cbwsh Configuration with Google Gemini
+# Place this file at: ~/.cbwsh/config.yaml
+
+# Shell settings
+shell:
+  default_shell: zsh         # Using zsh
+  history_size: 10000
+  history_path: ~/.cbwsh/history
+
+# UI settings
+ui:
+  theme: nord                # Using Nord theme
+  layout: horizontal         # Start with horizontal split
+  show_status_bar: true
+  enable_animations: true
+  syntax_highlighting: true
+
+# AI settings - Using Google Gemini
+ai:
+  provider: gemini
+  
+  # Gemini settings
+  api_key: ${GEMINI_API_KEY}
+  model: gemini-pro          # Model: gemini-pro, gemini-pro-vision
+  temperature: 0.3
+  max_tokens: 4096
+  
+  # Features
+  enable_suggestions: true
+  enable_monitoring: true
+  monitoring_interval: 30
+
+# SSH settings
+ssh:
+  default_user: user
+  key_path: ~/.ssh/id_ed25519
+  known_hosts: ~/.ssh/known_hosts
+  timeout: 30
+
+# Secrets settings
+secrets:
+  store_path: ~/.cbwsh/secrets.enc
+  encryption_algorithm: AES-256-GCM
+  key_derivation: argon2id
+
+# Note: Get your Gemini API key from:
+# https://makersuite.google.com/app/apikey
+# Then store it securely:
+#   export GEMINI_API_KEY="..."
+#   OR
+#   cbwsh secrets set GEMINI_API_KEY "..."
