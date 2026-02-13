@@ -1,0 +1,50 @@
+# Example cbwsh Configuration with OpenAI
+# Place this file at: ~/.cbwsh/config.yaml
+
+# Shell settings
+shell:
+  default_shell: bash
+  history_size: 10000
+  history_path: ~/.cbwsh/history
+
+# UI settings
+ui:
+  theme: dracula             # Using Dracula theme
+  layout: single
+  show_status_bar: true
+  enable_animations: true
+  syntax_highlighting: true
+
+# AI settings - Using OpenAI GPT-4
+ai:
+  provider: openai
+  
+  # OpenAI settings
+  api_key: ${OPENAI_API_KEY}  # Use environment variable or secrets
+  model: gpt-4                # Model: gpt-4, gpt-4-turbo, gpt-3.5-turbo
+  max_tokens: 2000
+  temperature: 0.2            # Lower = more deterministic
+  
+  # Features
+  enable_suggestions: true
+  enable_monitoring: true
+  monitoring_interval: 45
+
+# SSH settings
+ssh:
+  default_user: admin
+  key_path: ~/.ssh/id_rsa
+  known_hosts: ~/.ssh/known_hosts
+  timeout: 30
+
+# Secrets settings
+secrets:
+  store_path: ~/.cbwsh/secrets.enc
+  encryption_algorithm: AES-256-GCM
+  key_derivation: argon2id
+
+# Note: Store your OpenAI API key securely
+# Option 1: Use environment variable
+#   export OPENAI_API_KEY="sk-your-actual-key-here"
+# Option 2: Use cbwsh secrets
+#   cbwsh secrets set OPENAI_API_KEY "sk-your-actual-key-here"

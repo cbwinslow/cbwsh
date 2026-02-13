@@ -1,0 +1,352 @@
+name: AI Multi-Agent Review
+
+# Multi-agent AI review workflow
+# Uses OpenAI Codex, Google Gemini, and Anthropic Claude for comprehensive analysis
+
+on:
+  pull_request:
+    types: [opened, synchronize]
+    branches:
+      - main
+      - develop
+
+permissions:
+  contents: read
+  pull-requests: write
+  issues: write
+
+jobs:
+  openai-review:
+    name: OpenAI Codex Review
+    runs-on: ubuntu-latest
+    if: github.event.pull_request.draft == false
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      
+      - name: Install OpenAI SDK
+        run: |
+          pip install openai
+      
+      - name: OpenAI Code Review
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+        run: |
+          python << 'EOF'
+          import os
+          import subprocess
+          from openai import OpenAI
+          
+          # Initialize OpenAI client
+          client = OpenAI(api_key=os.environ.get('OPENAI_API_KEY'))
+          
+          # Get diff
+          diff = subprocess.check_output([
+              'git', 'diff', 
+              f'origin/{os.environ.get("GITHUB_BASE_REF")}...HEAD'
+          ]).decode('utf-8')
+          
+          if not diff:
+              print("No changes to review")
+              exit(0)
+          
+          # Configuration
+          MAX_DIFF_SIZE = 8000  # Maximum diff size to review
+          MAX_TOKENS = 2000     # Maximum response tokens
+          
+          # Review with GPT-4
+          diff_sample = diff[:MAX_DIFF_SIZE]
+          if len(diff) > MAX_DIFF_SIZE:
+              diff_sample += f"\n\n... (diff truncated, {len(diff) - MAX_DIFF_SIZE} chars omitted)"
+          
+          prompt = f"""Review the following code changes for:
+          - Code quality and best practices
+          - Potential bugs or issues
+          - Security vulnerabilities
+          - Performance concerns
+          - Suggestions for improvement
+          
+          Diff:
+          {diff_sample}
+          
+          Provide a concise, actionable review."""
+          
+          response = client.chat.completions.create(
+              model="gpt-4",
+              messages=[
+                  {"role": "system", "content": "You are an expert code reviewer."},
+                  {"role": "user", "content": prompt}
+              ],
+              temperature=0.2,
+              max_tokens=MAX_TOKENS
+          )
+          
+          review = response.choices[0].message.content
+          
+          # Save review
+          with open('openai-review.md', 'w') as f:
+              f.write(f"## 🤖 OpenAI Codex Review\n\n{review}")
+          
+          print(review)
+          EOF
+        continue-on-error: true
+      
+      - name: Upload OpenAI Review
+        uses: actions/upload-artifact@v4
+        with:
+          name: openai-review
+          path: openai-review.md
+          retention-days: 30
+
+  gemini-review:
+    name: Google Gemini Security Analysis
+    runs-on: ubuntu-latest
+    if: github.event.pull_request.draft == false
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      
+      - name: Install Google AI SDK
+        run: |
+          pip install google-generativeai
+      
+      - name: Gemini Security Analysis
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+        run: |
+          python << 'EOF'
+          import os
+          import subprocess
+          import google.generativeai as genai
+          
+          # Configure Gemini
+          genai.configure(api_key=os.environ.get('GEMINI_API_KEY'))
+          model = genai.GenerativeModel('gemini-pro')
+          
+          # Get changed files
+          changed_files = subprocess.check_output([
+              'git', 'diff', '--name-only',
+              f'origin/{os.environ.get("GITHUB_BASE_REF")}...HEAD'
+          ]).decode('utf-8').strip().split('\n')
+          
+          reviews = []
+          
+          for file_path in changed_files[:10]:  # Limit to 10 files
+              if not os.path.exists(file_path):
+                  continue
+              
+              try:
+                  with open(file_path, 'r') as f:
+                      code = f.read()
+                  
+                  if len(code) > 10000:  # Skip very large files
+                      continue
+                  
+                  prompt = f"""Analyze this code for security vulnerabilities:
+                  
+                  File: {file_path}
+                  
+                  {code[:8000]}
+                  
+                  Focus on:
+                  - SQL injection
+                  - XSS vulnerabilities
+                  - Authentication issues
+                  - Data exposure
+                  - Input validation
+                  - Cryptography issues
+                  
+                  Provide specific, actionable security recommendations."""
+                  
+                  response = model.generate_content(prompt)
+                  reviews.append(f"### {file_path}\n\n{response.text}\n")
+              
+              except Exception as e:
+                  print(f"Error analyzing {file_path}: {e}")
+          
+          # Save review
+          with open('gemini-review.md', 'w') as f:
+              f.write("## 🛡️ Gemini Security Analysis\n\n")
+              f.write('\n'.join(reviews) if reviews else "No security issues found.")
+          
+          print("Security analysis complete")
+          EOF
+        continue-on-error: true
+      
+      - name: Upload Gemini Review
+        uses: actions/upload-artifact@v4
+        with:
+          name: gemini-review
+          path: gemini-review.md
+          retention-days: 30
+
+  claude-review:
+    name: Anthropic Claude Architecture Review
+    runs-on: ubuntu-latest
+    if: github.event.pull_request.draft == false
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      
+      - name: Install Anthropic SDK
+        run: |
+          pip install anthropic
+      
+      - name: Claude Architecture Review
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: |
+          python << 'EOF'
+          import os
+          import subprocess
+          from anthropic import Anthropic
+          
+          # Initialize Anthropic client
+          client = Anthropic(api_key=os.environ.get('ANTHROPIC_API_KEY'))
+          
+          # Configuration
+          MAX_DIFF_SIZE = 100000  # Maximum diff size
+          
+          # Get diff
+          diff = subprocess.check_output([
+              'git', 'diff',
+              f'origin/{os.environ.get("GITHUB_BASE_REF")}...HEAD'
+          ]).decode('utf-8')
+          
+          if not diff:
+              print("No changes to review")
+              exit(0)
+          
+          # Limit diff size to avoid excessive costs
+          diff_sample = diff[:MAX_DIFF_SIZE]
+          if len(diff) > MAX_DIFF_SIZE:
+              diff_sample += f"\n\n... (diff truncated, {len(diff) - MAX_DIFF_SIZE} chars omitted)"
+          
+          # Review with Claude
+          prompt = f"""Review the following code changes from an architectural perspective:
+          
+          {diff_sample}
+          
+          Focus on:
+          - Architecture and design patterns
+          - Code organization and structure
+          - Maintainability and scalability
+          - API design
+          - Error handling patterns
+          - Testing strategy
+          
+          Provide strategic, high-level recommendations."""
+          
+          message = client.messages.create(
+              model="claude-3-opus-20240229",
+              max_tokens=4096,
+              temperature=0.2,
+              messages=[
+                  {"role": "user", "content": prompt}
+              ]
+          )
+          
+          review = message.content[0].text
+          
+          # Save review
+          with open('claude-review.md', 'w') as f:
+              f.write(f"## 🏗️ Claude Architecture Review\n\n{review}")
+          
+          print(review)
+          EOF
+        continue-on-error: true
+      
+      - name: Upload Claude Review
+        uses: actions/upload-artifact@v4
+        with:
+          name: claude-review
+          path: claude-review.md
+          retention-days: 30
+
+  consolidate-reviews:
+    name: Consolidate AI Reviews
+    runs-on: ubuntu-latest
+    needs: [openai-review, gemini-review, claude-review]
+    if: always()
+    
+    steps:
+      - name: Download OpenAI Review
+        uses: actions/download-artifact@v4
+        with:
+          name: openai-review
+          path: reviews
+        continue-on-error: true
+      
+      - name: Download Gemini Review
+        uses: actions/download-artifact@v4
+        with:
+          name: gemini-review
+          path: reviews
+        continue-on-error: true
+      
+      - name: Download Claude Review
+        uses: actions/download-artifact@v4
+        with:
+          name: claude-review
+          path: reviews
+        continue-on-error: true
+      
+      - name: Consolidate and Post Reviews
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const path = require('path');
+            
+            let fullReview = '# 🤖 Multi-Agent AI Review\n\n';
+            fullReview += 'This PR has been reviewed by multiple AI agents. Below are their findings:\n\n';
+            fullReview += '---\n\n';
+            
+            const reviewFiles = [
+              'reviews/openai-review.md',
+              'reviews/gemini-review.md',
+              'reviews/claude-review.md'
+            ];
+            
+            for (const file of reviewFiles) {
+              if (fs.existsSync(file)) {
+                const content = fs.readFileSync(file, 'utf8');
+                fullReview += content + '\n\n---\n\n';
+              }
+            }
+            
+            fullReview += '\n\n*Note: These are AI-generated reviews. Please use human judgment when evaluating suggestions.*';
+            
+            // Post as PR comment
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body: fullReview
+            });
+            
+            console.log('Consolidated review posted successfully');

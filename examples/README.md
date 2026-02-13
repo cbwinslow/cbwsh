@@ -90,3 +90,61 @@ We welcome contributions of example programs! Good examples:
 - Show practical, real-world usage
 
 See [CONTRIBUTING.md](../CONTRIBUTING.md) for more information.
+
+---
+
+## Configuration Examples
+
+This directory also includes example configuration files for different AI providers:
+
+### AI Provider Configurations
+
+- **[config-ollama.yaml](config-ollama.yaml)** - Local AI with Ollama (privacy-focused, offline)
+- **[config-openai.yaml](config-openai.yaml)** - OpenAI GPT-4 configuration
+- **[config-gemini.yaml](config-gemini.yaml)** - Google Gemini configuration
+- **[config-claude.yaml](config-claude.yaml)** - Anthropic Claude configuration
+
+### Using Configuration Examples
+
+Copy the desired configuration to your cbwsh config directory:
+
+```bash
+# Example: Use Ollama configuration
+cp examples/config-ollama.yaml ~/.cbwsh/config.yaml
+
+# Edit and customize
+vim ~/.cbwsh/config.yaml
+```
+
+## Quick Start Examples
+
+### Example 1: Basic Multi-Pane Workflow
+
+```bash
+# Start cbwsh
+cbwsh
+
+# Split vertically (Ctrl+\)
+# Left pane: edit code
+vim main.go
+
+# Switch to right pane (Ctrl+])
+# Run tests
+go test ./...
+```
+
+### Example 2: AI-Assisted Development
+
+```bash
+# Start cbwsh with Ollama configured
+cbwsh
+
+# Enable AI monitor (Ctrl+M)
+# Enter AI assist mode (Ctrl+A)
+# Ask: "How do I find all Go files modified in the last week?"
+```
+
+For more examples and documentation, see:
+- **[USAGE.md](../USAGE.md)** - Comprehensive usage guide
+- **[AGENTS.md](../AGENTS.md)** - AI agent configuration
+- **[README.md](../README.md)** - Project overview

@@ -1,0 +1,63 @@
+# Example cbwsh Configuration with Anthropic Claude
+# Place this file at: ~/.cbwsh/config.yaml
+
+# Shell settings
+shell:
+  default_shell: bash
+  history_size: 10000
+  history_path: ~/.cbwsh/history
+
+# UI settings
+ui:
+  theme: tokyo-night         # Using Tokyo Night theme
+  layout: grid               # Start with grid layout (4 panes)
+  show_status_bar: true
+  enable_animations: true
+  syntax_highlighting: true
+
+# AI settings - Using Anthropic Claude
+ai:
+  provider: anthropic
+  
+  # Claude settings
+  api_key: ${ANTHROPIC_API_KEY}
+  model: claude-3-opus-20240229  # Model: claude-3-opus, claude-3-sonnet, claude-3-haiku
+  max_tokens: 4096
+  temperature: 0.2
+  
+  # Features
+  enable_suggestions: true
+  enable_monitoring: true
+  monitoring_interval: 40
+
+# SSH settings
+ssh:
+  default_user: admin
+  key_path: ~/.ssh/id_rsa
+  known_hosts: ~/.ssh/known_hosts
+  timeout: 30
+  
+  # Multiple host configurations
+  hosts:
+    - name: web1
+      host: web1.example.com
+      user: deploy
+      port: 22
+    
+    - name: db1
+      host: db1.example.com
+      user: dbadmin
+      port: 22
+
+# Secrets settings
+secrets:
+  store_path: ~/.cbwsh/secrets.enc
+  encryption_algorithm: AES-256-GCM
+  key_derivation: argon2id
+
+# Note: Get your Claude API key from:
+# https://console.anthropic.com/
+# Then store it securely:
+#   export ANTHROPIC_API_KEY="sk-ant-..."
+#   OR
+#   cbwsh secrets set ANTHROPIC_API_KEY "sk-ant-..."
