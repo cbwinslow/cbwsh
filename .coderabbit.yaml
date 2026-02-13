@@ -1,0 +1,223 @@
+# CodeRabbit Configuration
+# Documentation: https://docs.coderabbit.ai/guides/configure-coderabbit
+
+# Language for reviews and comments
+language: "en-US"
+
+# Enable early access features (optional)
+early_access: false
+
+# Review configuration
+reviews:
+  # Review profile: assertive | chill
+  # assertive: More thorough, may request changes
+  # chill: Focuses on critical issues, more permissive
+  profile: "chill"
+  
+  # Request changes workflow
+  # If true, CodeRabbit will request changes for issues
+  request_changes_workflow: false
+  
+  # High-level summary of changes
+  high_level_summary: true
+  
+  # Include a poem in the review (for fun!)
+  poem: true
+  
+  # Show review status
+  review_status: true
+  
+  # Collapse the walkthrough section
+  collapse_walkthrough: false
+  
+  # Auto review settings
+  auto_review:
+    enabled: true
+    # Include draft PRs
+    drafts: false
+    # Base branches to auto-review
+    base_branches:
+      - main
+      - master
+      - develop
+  
+  # Review tools and integrations
+  tools:
+    # GitHub Checks integration
+    github-checks:
+      enabled: true
+      timeout: 90
+    
+    # Linters and static analysis
+    ruff:
+      enabled: true
+    
+    shellcheck:
+      enabled: true
+      severity: warning
+    
+    yamllint:
+      enabled: true
+    
+    markdownlint:
+      enabled: true
+    
+    golangci-lint:
+      enabled: true
+      config: .golangci.yml
+    
+    actionlint:
+      enabled: true
+
+# Chat configuration
+chat:
+  # Auto-reply to questions in comments
+  auto_reply: true
+
+# Path-based instructions for specific file types
+path_instructions:
+  # Go files
+  - path: "**/*.go"
+    instructions: |
+      - Follow Go best practices and idioms
+      - Check for goroutine leaks
+      - Verify proper error handling
+      - Ensure tests are present for new functions
+      - Check for race conditions
+      - Verify proper context usage
+  
+  # Shell scripts
+  - path: "**/*.sh"
+    instructions: |
+      - Use shellcheck recommendations
+      - Verify proper error handling with set -e
+      - Check for unquoted variables
+      - Ensure POSIX compliance if applicable
+  
+  # YAML files
+  - path: "**/*.yaml"
+    instructions: |
+      - Verify YAML syntax
+      - Check for security issues in GitHub Actions
+      - Ensure proper indentation
+  
+  - path: "**/*.yml"
+    instructions: |
+      - Verify YAML syntax
+      - Check for security issues in GitHub Actions
+      - Ensure proper indentation
+  
+  # Markdown documentation
+  - path: "**/*.md"
+    instructions: |
+      - Check for broken links
+      - Verify code examples are accurate
+      - Ensure proper formatting
+      - Check for typos and grammar
+  
+  # Test files
+  - path: "**/*_test.go"
+    instructions: |
+      - Verify test coverage
+      - Check for table-driven tests
+      - Ensure proper test cleanup
+      - Verify test names are descriptive
+  
+  # GitHub Actions workflows
+  - path: ".github/workflows/*.yml"
+    instructions: |
+      - Check for security best practices
+      - Verify secrets are properly used
+      - Ensure workflows are efficient
+      - Check for unnecessary steps
+  
+  # Configuration files
+  - path: "**/config*.yaml"
+    instructions: |
+      - Verify configuration schema
+      - Check for sensitive data
+      - Ensure defaults are sensible
+
+# Review focus areas
+reviews:
+  # Code quality
+  focus:
+    - correctness
+    - performance
+    - security
+    - maintainability
+    - readability
+    - testing
+  
+  # Ignore patterns
+  ignore:
+    - "vendor/**"
+    - "**/node_modules/**"
+    - "**/*.pb.go"
+    - "**/*.generated.go"
+    - "**/dist/**"
+    - "**/build/**"
+    - "**/.git/**"
+
+# Knowledge base
+knowledge_base:
+  # Project-specific knowledge
+  learnings:
+    - "cbwsh uses Bubble Tea for TUI components"
+    - "AI integration supports multiple providers: OpenAI, Anthropic, Gemini, Ollama"
+    - "Secrets are encrypted with AES-256-GCM and Argon2id"
+    - "Multi-pane management uses thread-safe operations"
+    - "Shell execution supports both bash and zsh"
+  
+  # Project patterns
+  patterns:
+    - "Use lipgloss for styling TUI components"
+    - "Manager packages follow singleton pattern with New() constructor"
+    - "Use context.Context for cancellable operations"
+    - "Errors should be wrapped with fmt.Errorf and %w verb"
+    - "Public APIs should have comprehensive godoc comments"
+
+# Tone and style
+tone_instructions: |
+  - Be helpful and constructive
+  - Focus on important issues
+  - Provide code examples when suggesting changes
+  - Explain the reasoning behind suggestions
+  - Be encouraging when code is well-written
+  - Use emojis sparingly but appropriately 🎯
+
+# Custom labels for issues found
+labels:
+  security: "security"
+  performance: "performance"
+  bug: "bug"
+  enhancement: "enhancement"
+  documentation: "documentation"
+  testing: "testing"
+
+# Exclude certain checks
+exclude_checks:
+  - nitpick  # Avoid too pedantic comments
+  # - typos  # Uncomment to disable typo checking
+
+# Rate limiting (to avoid overwhelming the repo)
+rate_limit:
+  comments_per_review: 25
+  reviews_per_day: 100
+
+# Integration settings
+integrations:
+  # Slack notifications (if configured)
+  slack:
+    enabled: false
+    # webhook_url: ""
+  
+  # Discord notifications (if configured)
+  discord:
+    enabled: false
+    # webhook_url: ""
+
+# Experimental features
+experimental:
+  # Enable new features in beta
+  enabled: true
