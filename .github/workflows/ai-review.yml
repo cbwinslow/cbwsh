@@ -58,7 +58,15 @@ jobs:
               print("No changes to review")
               exit(0)
           
+          # Configuration
+          MAX_DIFF_SIZE = 8000  # Maximum diff size to review
+          MAX_TOKENS = 2000     # Maximum response tokens
+          
           # Review with GPT-4
+          diff_sample = diff[:MAX_DIFF_SIZE]
+          if len(diff) > MAX_DIFF_SIZE:
+              diff_sample += f"\n\n... (diff truncated, {len(diff) - MAX_DIFF_SIZE} chars omitted)"
+          
           prompt = f"""Review the following code changes for:
           - Code quality and best practices
           - Potential bugs or issues
@@ -67,7 +75,7 @@ jobs:
           - Suggestions for improvement
           
           Diff:
-          {diff[:8000]}  # Limit to avoid token limits
+          {diff_sample}
           
           Provide a concise, actionable review."""
           
@@ -78,7 +86,7 @@ jobs:
                   {"role": "user", "content": prompt}
               ],
               temperature=0.2,
-              max_tokens=2000
+              max_tokens=MAX_TOKENS
           )
           
           review = response.choices[0].message.content
@@ -220,6 +228,9 @@ jobs:
           # Initialize Anthropic client
           client = Anthropic(api_key=os.environ.get('ANTHROPIC_API_KEY'))
           
+          # Configuration
+          MAX_DIFF_SIZE = 100000  # Maximum diff size
+          
           # Get diff
           diff = subprocess.check_output([
               'git', 'diff',
@@ -230,10 +241,15 @@ jobs:
               print("No changes to review")
               exit(0)
           
+          # Limit diff size to avoid excessive costs
+          diff_sample = diff[:MAX_DIFF_SIZE]
+          if len(diff) > MAX_DIFF_SIZE:
+              diff_sample += f"\n\n... (diff truncated, {len(diff) - MAX_DIFF_SIZE} chars omitted)"
+          
           # Review with Claude
           prompt = f"""Review the following code changes from an architectural perspective:
           
-          {diff[:100000]}  # Claude has large context window
+          {diff_sample}
           
           Focus on:
           - Architecture and design patterns

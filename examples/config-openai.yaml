@@ -45,6 +45,6 @@ secrets:
 
 # Note: Store your OpenAI API key securely
 # Option 1: Use environment variable
-#   export OPENAI_API_KEY="sk-..."
+#   export OPENAI_API_KEY="sk-your-actual-key-here"
 # Option 2: Use cbwsh secrets
-#   cbwsh secrets set OPENAI_API_KEY "sk-..."
+#   cbwsh secrets set OPENAI_API_KEY "sk-your-actual-key-here"
